@@ -2,804 +2,484 @@
 
 > **DISCLAIMER:** This tool is provided "as-is" without warranty. Use at your own risk. This is an independent, community-developed tool and is **NOT produced, endorsed, or supported by Dynatrace**.
 
-Programmatic usage guide for dtiam modules.
+Programmatic usage guide for dtiam Go packages.
 
 ## Overview
 
-While dtiam is primarily a CLI tool, its modules can be used programmatically for scripting and automation.
+While dtiam is primarily a CLI tool, its internal packages can be imported and used programmatically for scripting and automation in Go applications.
+
+## Package Import
+
+```go
+import (
+    "github.com/jtimothystewart/dtiam/internal/config"
+    "github.com/jtimothystewart/dtiam/internal/client"
+    "github.com/jtimothystewart/dtiam/internal/auth"
+    "github.com/jtimothystewart/dtiam/internal/resources"
+    "github.com/jtimothystewart/dtiam/internal/output"
+)
+```
 
 ## Configuration
 
 ### Loading Configuration
 
-```python
-from dtiam.config import load_config, save_config, Config
+```go
+import "github.com/jtimothystewart/dtiam/internal/config"
 
-# Load existing configuration
-config = load_config()
+// Load existing configuration from ~/.config/dtiam/config
+cfg, err := config.Load()
+if err != nil {
+    log.Fatal(err)
+}
 
-# Access current context
-context = config.get_current_context()
-print(f"Account UUID: {context.account_uuid}")
+// Access current context
+ctx := cfg.GetCurrentContext()
+fmt.Printf("Account UUID: %s\n", ctx.Context.AccountUUID)
 
-# Get specific context
-prod_context = config.get_context("production")
+// Get specific context
+prodCtx := cfg.GetContext("production")
 
-# Get credential
-credential = config.get_credential("prod-creds")
-print(f"Client ID: {credential.client_id}")
+// Get credential
+cred := cfg.GetCredential("prod-creds")
+fmt.Printf("Client ID: %s\n", cred.Credential.ClientID)
 ```
 
 ### Creating Configuration Programmatically
 
-```python
-from dtiam.config import Config, save_config
+```go
+import "github.com/jtimothystewart/dtiam/internal/config"
 
-config = Config()
+cfg := config.NewConfig()
 
-# Add credentials
-config.set_credential(
-    name="prod-creds",
-    client_id="dt0s01.XXXX",
-    client_secret="dt0s01.XXXX.YYYY"
-)
+// Add credentials
+cfg.SetCredential("prod-creds", "dt0s01.XXXX", "dt0s01.XXXX.YYYY")
 
-# Add context
-config.set_context(
-    name="production",
-    account_uuid="abc-123-def",
-    credentials_ref="prod-creds"
-)
+// Add context
+cfg.SetContext("production", "abc-123-def", "prod-creds")
 
-# Set as current context
-config.current_context = "production"
+// Set as current context
+cfg.SetCurrentContext("production")
 
-# Save to file
-save_config(config)
+// Save to file
+if err := config.Save(cfg); err != nil {
+    log.Fatal(err)
+}
 ```
 
 ### Environment Variables
 
-```python
-from dtiam.config import get_env_override
+```go
+import (
+    "os"
+    "github.com/jtimothystewart/dtiam/internal/config"
+)
 
-# Check for environment overrides
-context = get_env_override("context")  # DTIAM_CONTEXT
-client_id = get_env_override("client_id")  # DTIAM_CLIENT_ID
+// Check for environment overrides
+accountUUID := os.Getenv("DTIAM_ACCOUNT_UUID")
+clientID := os.Getenv("DTIAM_CLIENT_ID")
+clientSecret := os.Getenv("DTIAM_CLIENT_SECRET")
+bearerToken := os.Getenv("DTIAM_BEARER_TOKEN")
 ```
 
 ## HTTP Client
 
 ### Creating a Client
 
-```python
-from dtiam.config import load_config
-from dtiam.client import create_client_from_config, Client
+```go
+import (
+    "github.com/jtimothystewart/dtiam/internal/client"
+    "github.com/jtimothystewart/dtiam/internal/auth"
+)
 
-# From configuration file
-config = load_config()
-client = create_client_from_config(config, context_name="production", verbose=True)
+// Create OAuth2 token manager
+tokenMgr := auth.NewOAuthTokenManager(
+    "dt0s01.XXXX",           // client ID
+    "dt0s01.XXXX.YYYY",      // client secret
+    "abc-123-def",           // account UUID
+)
 
-# Use the client
-try:
-    response = client.get("/groups")
-    groups = response.json()
-finally:
-    client.close()
+// Create client
+c := client.New(
+    "abc-123-def",           // account UUID
+    tokenMgr,                // token provider
+    client.WithVerbose(true),
+    client.WithTimeout(30*time.Second),
+)
+defer c.Close()
 
-# Context manager usage
-with create_client_from_config(config) as client:
-    response = client.get("/groups")
-    groups = response.json()
+// Make requests
+resp, err := c.Get(ctx, "/groups")
+if err != nil {
+    log.Fatal(err)
+}
 ```
 
-### Direct Client Construction
+### Direct Client Construction with Bearer Token
 
-```python
-from dtiam.client import Client, RetryConfig
-from dtiam.utils.auth import TokenManager
-
-# Create token manager
-token_manager = TokenManager(
-    client_id="dt0s01.XXXX",
-    client_secret="dt0s01.XXXX.YYYY",
-    account_uuid="abc-123-def"
+```go
+import (
+    "github.com/jtimothystewart/dtiam/internal/client"
+    "github.com/jtimothystewart/dtiam/internal/auth"
 )
 
-# Custom retry configuration
-retry_config = RetryConfig(
-    max_retries=5,
-    retry_statuses=[429, 500, 502, 503, 504],
-    initial_delay=0.5,
-    max_delay=30.0,
-    exponential_base=2.0
-)
+// Create static token manager (for bearer tokens)
+// WARNING: Token will NOT auto-refresh!
+tokenMgr := auth.NewStaticTokenManager("dt0c01.XXXX.YYYY...")
 
-# Create client
-client = Client(
-    account_uuid="abc-123-def",
-    token_manager=token_manager,
-    timeout=60.0,
-    retry_config=retry_config,
-    verbose=True
+// Create client
+c := client.New(
+    "abc-123-def",
+    tokenMgr,
 )
+defer c.Close()
+```
 
-# Make requests
-response = client.get("/groups")
-response = client.post("/groups", json={"name": "New Group"})
-response = client.put("/groups/uuid", json={"name": "Updated"})
-response = client.delete("/groups/uuid")
+### Custom Retry Configuration
+
+```go
+import "github.com/jtimothystewart/dtiam/internal/client"
+
+retryConfig := client.RetryConfig{
+    MaxRetries:      5,
+    InitialDelay:    500 * time.Millisecond,
+    MaxDelay:        30 * time.Second,
+    ExponentialBase: 2.0,
+    RetryStatuses:   []int{429, 500, 502, 503, 504},
+}
+
+c := client.New(
+    "abc-123-def",
+    tokenMgr,
+    client.WithRetryConfig(retryConfig),
+)
 ```
 
 ### Error Handling
 
-```python
-from dtiam.client import APIError
+```go
+import "github.com/jtimothystewart/dtiam/internal/client"
 
-try:
-    response = client.get("/groups/invalid-uuid")
-except APIError as e:
-    print(f"Status: {e.status_code}")
-    print(f"Message: {e}")
-    print(f"Body: {e.response_body}")
+resp, err := c.Get(ctx, "/groups/invalid-uuid")
+if err != nil {
+    if apiErr, ok := err.(*client.APIError); ok {
+        fmt.Printf("Status: %d\n", apiErr.StatusCode)
+        fmt.Printf("Message: %s\n", apiErr.Message)
+        fmt.Printf("Body: %s\n", apiErr.ResponseBody)
+
+        if apiErr.IsNotFound() {
+            fmt.Println("Resource not found")
+        }
+    }
+}
 ```
 
 ## Resource Handlers
 
 ### Groups
 
-```python
-from dtiam.resources.groups import GroupHandler
-
-handler = GroupHandler(client)
-
-# List all groups
-groups = handler.list()
-
-# Get by UUID
-group = handler.get("uuid-here")
-
-# Get by name
-group = handler.get_by_name("DevOps Team")
-
-# Get expanded (includes members and policies)
-expanded = handler.get_expanded("uuid-here")
-
-# Create a group
-new_group = handler.create({
-    "name": "New Team",
-    "description": "A new team"
-})
-
-# Update a group
-updated = handler.update("uuid-here", {
-    "name": "Updated Name",
-    "description": "Updated description"
-})
-
-# Delete a group
-success = handler.delete("uuid-here")
-
-# Member operations
-members = handler.get_members("group-uuid")
-handler.add_member("group-uuid", "user@example.com")
-handler.remove_member("group-uuid", "user-uid")
-
-# Clone a group
-cloned = handler.clone(
-    source_group_id="source-uuid",
-    new_name="Cloned Group",
-    new_description="A clone",
-    include_members=True,
-    include_policies=True
+```go
+import (
+    "context"
+    "github.com/jtimothystewart/dtiam/internal/resources"
 )
 
-# Setup with policy binding
-result = handler.setup_with_policy(
-    group_name="New Team",
-    policy_uuid="policy-uuid",
-    boundary_uuid="boundary-uuid",  # optional
-    description="Team description"
-)
+handler := resources.NewGroupHandler(c)
+ctx := context.Background()
+
+// List all groups
+groups, err := handler.List(ctx, nil)
+
+// Get by UUID
+group, err := handler.Get(ctx, "uuid-here")
+
+// Get by name
+group, err := handler.GetByName(ctx, "DevOps Team")
+
+// Create a group
+newGroup, err := handler.Create(ctx, "New Team", "A new team description")
+
+// Update a group
+updated, err := handler.Update(ctx, "uuid-here", "Updated Name", "Updated description")
+
+// Delete a group
+err = handler.Delete(ctx, "uuid-here")
+
+// Member operations
+members, err := handler.GetMembers(ctx, "group-uuid")
+err = handler.AddMember(ctx, "group-uuid", "user@example.com")
+err = handler.RemoveMember(ctx, "group-uuid", "user-uid")
 ```
 
 ### Users
 
-```python
-from dtiam.resources.users import UserHandler
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-handler = UserHandler(client)
+handler := resources.NewUserHandler(c)
+ctx := context.Background()
 
-# List all users
-users = handler.list()
+// List all users
+users, err := handler.List(ctx, nil)
 
-# List including service users
-users = handler.list(include_service_users=True)
+// Get by UID
+user, err := handler.Get(ctx, "user-uid")
 
-# Get by UID
-user = handler.get("user-uid")
+// Get by email
+user, err := handler.GetByEmail(ctx, "user@example.com")
 
-# Get by email
-user = handler.get_by_email("user@example.com")
+// Get user's groups
+groups, err := handler.GetGroups(ctx, "user-uid")
 
-# Get expanded (includes groups)
-expanded = handler.get_expanded("user-uid")
+// Create a user
+firstName := "John"
+lastName := "Doe"
+newUser, err := handler.Create(ctx, "user@example.com", &firstName, &lastName, []string{"group-uuid"})
 
-# Get user's groups
-groups = handler.get_groups("user-uid")
+// Add to groups
+err = handler.AddToGroups(ctx, "user@example.com", []string{"group-uuid-1", "group-uuid-2"})
 
-# Create a user
-new_user = handler.create(
-    email="user@example.com",
-    first_name="John",
-    last_name="Doe",
-    groups=["group-uuid-1", "group-uuid-2"]  # optional
-)
+// Remove from groups
+err = handler.RemoveFromGroups(ctx, "user@example.com", []string{"group-uuid"})
 
-# Delete a user
-success = handler.delete("user-uid")
+// Replace all group memberships
+err = handler.ReplaceGroups(ctx, "user@example.com", []string{"new-group-uuid"})
+
+// Delete a user
+err = handler.Delete(ctx, "user-uid")
 ```
 
 ### Service Users
 
-```python
-from dtiam.resources.service_users import ServiceUserHandler
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-handler = ServiceUserHandler(client)
+handler := resources.NewServiceUserHandler(c)
+ctx := context.Background()
 
-# List all service users
-service_users = handler.list()
+// List all service users
+serviceUsers, err := handler.List(ctx, nil)
 
-# Get by UUID
-user = handler.get("service-user-uuid")
+// Get by UID
+user, err := handler.Get(ctx, "service-user-uid")
 
-# Get by name
-user = handler.get_by_name("CI Pipeline")
+// Get by name
+user, err := handler.GetByName(ctx, "CI Pipeline")
 
-# Get expanded (includes groups)
-expanded = handler.get_expanded("service-user-uuid")
+// Create a service user (returns client credentials!)
+description := "CI/CD automation"
+result, err := handler.Create(ctx, "CI Pipeline", &description, []string{"group-uuid"})
+// IMPORTANT: Save result["clientId"] and result["clientSecret"]
+// The secret cannot be retrieved later!
 
-# Create a service user (returns client credentials!)
-result = handler.create(
-    name="CI Pipeline",
-    description="CI/CD automation",
-    groups=["group-uuid-1", "group-uuid-2"]  # optional
-)
-# IMPORTANT: Save result["clientId"] and result["clientSecret"]
-# The secret cannot be retrieved later!
+// Update a service user
+newName := "New Name"
+updated, err := handler.Update(ctx, "service-user-uid", &newName, nil, nil)
 
-# Update a service user
-updated = handler.update(
-    "service-user-uuid",
-    name="New Name",
-    description="Updated description"
-)
+// Delete a service user
+err = handler.Delete(ctx, "service-user-uid")
 
-# Delete a service user
-success = handler.delete("service-user-uuid")
-
-# Group management
-groups = handler.get_groups("service-user-uuid")
-handler.add_to_group("service-user-uuid", "group-uuid")
-handler.remove_from_group("service-user-uuid", "group-uuid")
+// Group management
+groups, err := handler.GetGroups(ctx, "service-user-uid")
+err = handler.AddToGroup(ctx, "service-user-uid", "group-uuid")
+err = handler.RemoveFromGroup(ctx, "service-user-uid", "group-uuid")
 ```
 
 ### Policies
 
-```python
-from dtiam.resources.policies import PolicyHandler
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-# Account-level policies
-handler = PolicyHandler(
-    client,
-    level_type="account",
-    level_id=client.account_uuid
-)
+// Account-level policies
+handler := resources.NewPolicyHandler(c, "account", accountUUID)
+ctx := context.Background()
 
-# Global policies (read-only)
-global_handler = PolicyHandler(
-    client,
-    level_type="global",
-    level_id="global"
-)
+// Global policies (read-only)
+globalHandler := resources.NewPolicyHandler(c, "global", "global")
 
-# List policies
-policies = handler.list()
+// List policies
+policies, err := handler.List(ctx, nil)
 
-# Get by UUID
-policy = handler.get("policy-uuid")
+// Get by UUID
+policy, err := handler.Get(ctx, "policy-uuid")
 
-# Get by name
-policy = handler.get_by_name("admin-policy")
+// Get by name
+policy, err := handler.GetByName(ctx, "admin-policy")
 
-# Create a policy
-new_policy = handler.create({
-    "name": "viewer-policy",
-    "description": "Read-only access",
-    "statementQuery": "ALLOW settings:objects:read;"
-})
+// Create a policy
+newPolicy, err := handler.Create(ctx, "viewer-policy", "Read-only access", "ALLOW settings:objects:read;")
 
-# Update a policy
-updated = handler.update("policy-uuid", {
-    "name": "updated-policy",
-    "statementQuery": "ALLOW settings:objects:read; ALLOW settings:schemas:read;"
-})
+// Update a policy
+updated, err := handler.Update(ctx, "policy-uuid", "updated-policy", "New description", "ALLOW settings:objects:read; ALLOW settings:schemas:read;")
 
-# Delete a policy
-success = handler.delete("policy-uuid")
+// Delete a policy
+err = handler.Delete(ctx, "policy-uuid")
 ```
 
 ### Bindings
 
-```python
-from dtiam.resources.bindings import BindingHandler
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-handler = BindingHandler(
-    client,
-    level_type="account",
-    level_id=client.account_uuid
-)
+handler := resources.NewBindingHandler(c)
+ctx := context.Background()
 
-# List all bindings
-bindings = handler.list()
+// List all bindings (flattened)
+bindings, err := handler.List(ctx, nil)
 
-# Get bindings for a group
-group_bindings = handler.get_for_group("group-uuid")
+// Get bindings for a group
+groupBindings, err := handler.GetForGroup(ctx, "group-uuid")
 
-# Create a binding
-binding = handler.create(
-    group_uuid="group-uuid",
-    policy_uuid="policy-uuid",
-    boundaries=["boundary-uuid"]  # optional
-)
+// Create a binding
+err = handler.Create(ctx, "group-uuid", "policy-uuid", []string{"boundary-uuid"})
 
-# Delete a binding
-success = handler.delete(
-    group_uuid="group-uuid",
-    policy_uuid="policy-uuid"
-)
+// Delete a binding
+err = handler.Delete(ctx, "group-uuid", "policy-uuid")
 
-# Add boundary to existing binding
-handler.add_boundary("group-uuid", "policy-uuid", "boundary-uuid")
+// Add boundary to existing binding
+err = handler.AddBoundary(ctx, "group-uuid", "policy-uuid", "boundary-uuid")
 
-# Remove boundary from binding
-handler.remove_boundary("group-uuid", "policy-uuid", "boundary-uuid")
+// Remove boundary from binding
+err = handler.RemoveBoundary(ctx, "group-uuid", "policy-uuid", "boundary-uuid")
 ```
 
 ### Boundaries
 
-```python
-from dtiam.resources.boundaries import BoundaryHandler
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-handler = BoundaryHandler(client)
+handler := resources.NewBoundaryHandler(c)
+ctx := context.Background()
 
-# List boundaries
-boundaries = handler.list()
+// List boundaries
+boundaries, err := handler.List(ctx, nil)
 
-# Get by UUID
-boundary = handler.get("boundary-uuid")
+// Get by UUID
+boundary, err := handler.Get(ctx, "boundary-uuid")
 
-# Get by name
-boundary = handler.get_by_name("prod-boundary")
+// Get by name
+boundary, err := handler.GetByName(ctx, "prod-boundary")
 
-# Create from management zones
-boundary = handler.create_from_zones(
-    name="Production Only",
-    management_zones=["Production", "Staging"],
-    description="Restricts to production zones"
-)
+// Create from management zones
+boundary, err := handler.CreateFromZones(ctx, "Production Only", "Restricts to production zones", []string{"Production", "Staging"})
 
-# Create with custom query
-boundary = handler.create({
-    "name": "Custom Boundary",
-    "boundaryQuery": "environment.tag.equals('production')",
-    "description": "Custom boundary query"
-})
+// Create with custom query
+boundary, err := handler.CreateWithQuery(ctx, "Custom Boundary", "Custom boundary query", "environment.tag.equals('production')")
 
-# Get attached policies
-attached = handler.get_attached_policies("boundary-uuid")
+// Get attached policies
+attached, err := handler.GetAttachedPolicies(ctx, "boundary-uuid")
 
-# Delete a boundary
-success = handler.delete("boundary-uuid")
+// Delete a boundary
+err = handler.Delete(ctx, "boundary-uuid")
 ```
 
 ### Environments
 
-```python
-from dtiam.resources.environments import EnvironmentHandler
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-handler = EnvironmentHandler(client)
+handler := resources.NewEnvironmentHandler(c)
+ctx := context.Background()
 
-# List environments
-environments = handler.list()
+// List environments
+environments, err := handler.List(ctx, nil)
 
-# Get by ID
-env = handler.get("env-id")
+// Get by ID
+env, err := handler.Get(ctx, "env-id")
 
-# Get by name
-env = handler.get_by_name("Production")
+// Get by name
+env, err := handler.GetByName(ctx, "Production")
 ```
 
 ### Account Limits
 
-```python
-from dtiam.resources.limits import AccountLimitsHandler
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-handler = AccountLimitsHandler(client)
+handler := resources.NewLimitsHandler(c)
+ctx := context.Background()
 
-# List all limits
-limits = handler.list()
+// List all limits
+limits, err := handler.List(ctx, nil)
 
-# Get a specific limit
-limit = handler.get("maxUsers")
+// Get a specific limit
+limit, err := handler.Get(ctx, "maxUsers")
 
-# Get summary with usage percentages
-summary = handler.get_summary()
-# {
-#     "limits": [
-#         {"name": "maxUsers", "current": 50, "max": 100, "usage_percent": 50.0, "status": "ok"},
-#         {"name": "maxGroups", "current": 85, "max": 100, "usage_percent": 85.0, "status": "near_capacity"},
-#     ],
-#     "total_limits": 5,
-#     "limits_near_capacity": 1,
-#     "limits_at_capacity": 0,
-# }
-
-# Check capacity before adding resources
-result = handler.check_capacity("maxUsers", additional=10)
-# {
-#     "limit_name": "maxUsers",
-#     "has_capacity": True,
-#     "current": 50,
-#     "max": 100,
-#     "available": 50,
-#     "message": "Capacity available (50 remaining)"
-# }
+// Check capacity before adding resources
+hasCapacity, remaining, err := handler.CheckCapacity(ctx, "maxUsers", 10)
+if hasCapacity {
+    fmt.Printf("Capacity available (%d remaining)\n", remaining)
+}
 ```
 
 ### Subscriptions
 
-```python
-from dtiam.resources.subscriptions import SubscriptionHandler
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-handler = SubscriptionHandler(client)
+handler := resources.NewSubscriptionHandler(c)
+ctx := context.Background()
 
-# List all subscriptions
-subscriptions = handler.list()
+// List all subscriptions
+subscriptions, err := handler.List(ctx, nil)
 
-# Get a specific subscription
-sub = handler.get("subscription-uuid")
+// Get a specific subscription
+sub, err := handler.Get(ctx, "subscription-uuid")
 
-# Get by name
-sub = handler.get_by_name("My Subscription")
-
-# Get summary
-summary = handler.get_summary()
-# {
-#     "total_subscriptions": 2,
-#     "active_subscriptions": 2,
-#     "subscriptions": [...]
-# }
-
-# Get usage forecast
-forecast = handler.get_forecast()
-forecast = handler.get_forecast("subscription-uuid")  # specific subscription
-
-# Get usage for a subscription
-usage = handler.get_usage("subscription-uuid")
-
-# Get capabilities
-capabilities = handler.get_capabilities()
-capabilities = handler.get_capabilities("subscription-uuid")
-```
-
-### Management Zones (Legacy)
-
-> **DEPRECATION NOTICE:** Management Zone features are provided for legacy purposes only and will be removed in a future release.
-
-```python
-from dtiam.resources.zones import ZoneHandler
-
-handler = ZoneHandler(client)
-
-# List zones
-zones = handler.list()
-
-# Get by ID
-zone = handler.get("zone-id")
-
-# Get by name
-zone = handler.get_by_name("Production Zone")
-
-# Compare zones with groups
-from dtiam.resources.groups import GroupHandler
-group_handler = GroupHandler(client)
-groups = group_handler.list()
-
-comparison = handler.compare_with_groups(groups, case_sensitive=False)
-# Returns: matched, unmatched_zones, unmatched_groups
+// Get usage forecast
+forecast, err := handler.GetForecast(ctx)
 ```
 
 ## Output Formatting
 
 ### Using the Printer
 
-```python
-from dtiam.output import Printer, OutputFormat, Column
+```go
+import "github.com/jtimothystewart/dtiam/internal/output"
 
-# Create printer
-printer = Printer(format=OutputFormat.TABLE, plain=False)
+// Create printer
+printer := output.NewPrinter(output.FormatTable, false)
 
-# Print data
-data = [{"uuid": "123", "name": "Test"}]
-printer.print(data)
+// Print data
+data := []map[string]any{
+    {"uuid": "123", "name": "Test"},
+}
+err := printer.Print(data, nil)
 
-# With custom columns
-columns = [
-    Column("uuid", "UUID"),
-    Column("name", "NAME"),
-    Column("description", "DESCRIPTION", wide_only=True),
-]
-printer.print(data, columns)
-
-# Get as string instead of printing
-output_str = printer.format_str(data, columns)
+// With custom columns
+columns := output.GroupColumns()
+err = printer.Print(data, columns)
 ```
 
 ### Output Formats
 
-```python
-from dtiam.output import OutputFormat
+```go
+import "github.com/jtimothystewart/dtiam/internal/output"
 
-# Available formats
-OutputFormat.TABLE   # ASCII table (default)
-OutputFormat.WIDE    # Table with extra columns
-OutputFormat.JSON    # JSON output
-OutputFormat.YAML    # YAML output
-OutputFormat.CSV     # CSV output
-OutputFormat.PLAIN   # Machine-readable JSON
+// Available formats
+output.FormatTable   // ASCII table (default)
+output.FormatWide    // Table with extra columns
+output.FormatJSON    // JSON output
+output.FormatYAML    // YAML output
+output.FormatCSV     // CSV output
+output.FormatPlain   // Machine-readable plain text
 ```
 
 ### Custom Columns
 
-```python
-from dtiam.output import Column
+```go
+import "github.com/jtimothystewart/dtiam/internal/output"
 
-# Basic column
-col = Column("name", "NAME")
+// Basic column
+col := output.Column{Key: "name", Header: "NAME"}
 
-# Wide-only column (hidden in normal table view)
-col = Column("createdAt", "CREATED", wide_only=True)
+// Wide-only column (hidden in normal table view)
+col := output.Column{Key: "createdAt", Header: "CREATED", WideOnly: true}
 
-# With custom formatter
-col = Column(
-    "status",
-    "STATUS",
-    formatter=lambda x: "Active" if x == "ACTIVE" else "Inactive"
-)
-
-# Nested key access
-col = Column("metadata.createdAt", "CREATED")
-```
-
-## Caching
-
-### Using the Cache
-
-```python
-from dtiam.utils.cache import cache, cached
-
-# Direct cache usage
-cache.set("key", {"data": "value"}, ttl=300)
-value = cache.get("key")  # Returns None if expired
-cache.delete("key")
-
-# Cache statistics
-stats = cache.stats()
-# {
-#     "total_entries": 10,
-#     "active_entries": 8,
-#     "expired_entries": 2,
-#     "hits": 50,
-#     "misses": 10,
-#     "hit_rate": 83.33,
-#     "default_ttl": 300
-# }
-
-# Clear cache
-count = cache.clear()  # Clear all
-count = cache.clear_expired()  # Clear only expired
-count = cache.clear_prefix("groups:")  # Clear by prefix
-
-# Reset statistics
-cache.reset_stats()
-
-# Get all keys
-keys = cache.keys()
-```
-
-### Cache Decorator
-
-```python
-from dtiam.utils.cache import cached
-
-@cached(ttl=300, prefix="groups")
-def get_all_groups():
-    return client.get("/groups").json()
-
-# First call - hits API
-groups = get_all_groups()
-
-# Subsequent calls within TTL - returns cached data
-groups = get_all_groups()
-```
-
-## Permissions Analysis
-
-### Effective Permissions
-
-```python
-from dtiam.utils.permissions import PermissionsCalculator
-
-calculator = PermissionsCalculator(client)
-
-# User effective permissions
-user_perms = calculator.get_user_effective_permissions("user@example.com")
-# {
-#     "user": {"uid": "...", "email": "..."},
-#     "groups": [...],
-#     "effective_permissions": [
-#         {"effect": "ALLOW", "action": "settings:objects:read", "sources": [...]}
-#     ],
-#     "permission_count": 10
-# }
-
-# Group effective permissions
-group_perms = calculator.get_group_effective_permissions("DevOps Team")
-```
-
-### Effective Permissions API (Direct)
-
-```python
-from dtiam.utils.permissions import EffectivePermissionsAPI
-
-api = EffectivePermissionsAPI(client)
-
-# Get effective permissions for a user (by email or UID)
-result = api.get_user_effective_permissions(
-    user_id="user@example.com",
-    level_type="account",  # "account" or "environment"
-    level_id=None,  # defaults to client.account_uuid
-    services=["settings", "automation"],  # optional filter
-)
-# {
-#     "effectivePermissions": [
-#         {"permission": "settings:objects:read", "effect": "ALLOW", ...},
-#         {"permission": "automation:workflows:read", "effect": "ALLOW", ...}
-#     ],
-#     "total": 25,
-#     "pageSize": 100,
-#     "pageNumber": 1
-# }
-
-# Get effective permissions for a group (by name or UUID)
-result = api.get_group_effective_permissions(
-    group_id="DevOps Team",
-    level_type="account",
-)
-
-# Low-level API with pagination control
-result = api.get_effective_permissions(
-    entity_id="user-uid-here",
-    entity_type="user",  # "user" or "group"
-    level_type="account",
-    level_id="abc-123-def",
-    page=1,
-    page_size=100,
-)
-```
-
-### Permissions Matrix
-
-```python
-from dtiam.utils.permissions import PermissionsMatrix
-
-matrix = PermissionsMatrix(client)
-
-# Policy matrix
-policy_matrix = matrix.generate_policy_matrix()
-# {
-#     "permissions": ["settings:objects:read", ...],
-#     "matrix": [
-#         {"policy_name": "admin", "settings:objects:read": True, ...}
-#     ]
-# }
-
-# Group matrix
-group_matrix = matrix.generate_group_matrix()
-```
-
-### Statement Parsing
-
-```python
-from dtiam.utils.permissions import parse_statement_query
-
-statement = "ALLOW settings:objects:read; DENY settings:objects:write WHERE environment.tag.equals('prod');"
-permissions = parse_statement_query(statement)
-# [
-#     {"effect": "ALLOW", "action": "settings:objects:read", "conditions": None},
-#     {"effect": "DENY", "action": "settings:objects:write", "conditions": "environment.tag.equals('prod')"}
-# ]
-```
-
-## Templates
-
-### Template Manager
-
-```python
-from dtiam.utils.templates import TemplateManager, TemplateRenderer
-
-manager = TemplateManager()
-
-# List available templates
-templates = manager.list_templates()
-# [{"name": "group-team", "kind": "Group", "source": "builtin", ...}]
-
-# Get template definition
-template = manager.get_template("group-team")
-
-# Get required variables
-variables = manager.get_template_variables("group-team")
-# [{"name": "team_name", "required": True}, ...]
-
-# Render a template
-rendered = manager.render_template("group-team", {
-    "team_name": "Platform",
-    "description": "Platform team"
-})
-# {"kind": "Group", "spec": {"name": "Platform", ...}}
-```
-
-### Custom Templates
-
-```python
-# Save a custom template
-manager.save_template(
-    name="my-template",
-    kind="Group",
-    template={
-        "name": "{{ group_name }}",
-        "description": "{{ description | default('') }}"
-    },
-    description="My custom template"
-)
-
-# Delete a template
-manager.delete_template("my-template")
-
-# Get templates directory
-print(manager.templates_dir)
-```
-
-### Template Rendering
-
-```python
-from dtiam.utils.templates import TemplateRenderer
-
-renderer = TemplateRenderer()
-
-# Render template with variables
-template = {
-    "name": "{{ team_name }}",
-    "description": "{{ description | default('No description') }}",
-    "members": ["{{ lead_email }}"]
-}
-
-result = renderer.render(template, {
-    "team_name": "Platform",
-    "lead_email": "lead@example.com"
-})
-# {"name": "Platform", "description": "No description", "members": ["lead@example.com"]}
+// Use predefined columns
+groupCols := output.GroupColumns()
+userCols := output.UserColumns()
+policyCols := output.PolicyColumns()
 ```
 
 ## Authentication
@@ -808,49 +488,38 @@ dtiam supports two authentication methods:
 
 ### Option 1: OAuth2 Token Manager (Recommended)
 
-The `TokenManager` class handles OAuth2 client credentials flow with automatic token refresh. This is recommended for automation and long-running processes.
+The `OAuthTokenManager` handles OAuth2 client credentials flow with automatic token refresh. This is recommended for automation and long-running processes.
 
-```python
-from dtiam.utils.auth import TokenManager
+```go
+import "github.com/jtimothystewart/dtiam/internal/auth"
 
-# Create manager with OAuth2 credentials
-token_manager = TokenManager(
-    client_id="dt0s01.XXXX",
-    client_secret="dt0s01.XXXX.YYYY",
-    account_uuid="abc-123-def"
+// Create manager with OAuth2 credentials
+tokenMgr := auth.NewOAuthTokenManager(
+    "dt0s01.XXXX",           // client ID
+    "dt0s01.XXXX.YYYY",      // client secret
+    "abc-123-def",           // account UUID
 )
 
-# Get authentication headers (auto-refreshes if expired)
-headers = token_manager.get_headers()
-# {"Authorization": "Bearer eyJ..."}
+// Get authentication token (auto-refreshes if expired)
+token, err := tokenMgr.GetToken()
 
-# Check if token is valid
-is_valid = token_manager.is_token_valid()
-
-# Force token refresh
-token_manager._refresh_token()
-
-# Clean up
-token_manager.close()
+// Check if token is valid
+isValid := tokenMgr.IsValid()
 ```
 
 ### Option 2: Static Bearer Token
 
-The `StaticTokenManager` class uses a pre-existing bearer token. **Warning:** Static tokens do NOT auto-refresh and will fail when expired.
+The `StaticTokenManager` uses a pre-existing bearer token. **Warning:** Static tokens do NOT auto-refresh and will fail when expired.
 
-```python
-from dtiam.utils.auth import StaticTokenManager
+```go
+import "github.com/jtimothystewart/dtiam/internal/auth"
 
-# Create manager with static bearer token
-# WARNING: Token will NOT auto-refresh!
-token_manager = StaticTokenManager(token="dt0c01.XXXX.YYYY...")
+// Create manager with static bearer token
+// WARNING: Token will NOT auto-refresh!
+tokenMgr := auth.NewStaticTokenManager("dt0c01.XXXX.YYYY...")
 
-# Get authentication headers
-headers = token_manager.get_headers()
-# {"Authorization": "Bearer dt0c01.XXXX.YYYY..."}
-
-# Check if token exists (cannot verify expiration)
-is_valid = token_manager.is_token_valid()
+// Get token (always returns the same token)
+token, err := tokenMgr.GetToken()
 ```
 
 **When to use Static Bearer Token:**
@@ -865,96 +534,87 @@ is_valid = token_manager.is_token_valid()
 - Long-running processes (use OAuth2)
 - Production environments (use OAuth2)
 
-### Using with Client
+## Name Resolution
 
-```python
-from dtiam.client import Client
-from dtiam.utils.auth import TokenManager, StaticTokenManager
+The `GetOrResolve` helper function handles resolution of identifiers that could be UUIDs or names:
 
-# OAuth2 (recommended)
-oauth_manager = TokenManager(
-    client_id="dt0s01.XXXX",
-    client_secret="dt0s01.XXXX.YYYY",
-    account_uuid="abc-123-def"
-)
-client = Client(account_uuid="abc-123-def", token_manager=oauth_manager)
+```go
+import "github.com/jtimothystewart/dtiam/internal/resources"
 
-# Static bearer token (for testing only)
-static_manager = StaticTokenManager(token="dt0c01.XXXX...")
-client = Client(account_uuid="abc-123-def", token_manager=static_manager)
-```
+handler := resources.NewGroupHandler(c)
+ctx := context.Background()
 
-### Environment Variable Authentication
-
-```python
-import os
-
-# OAuth2 via environment variables
-os.environ["DTIAM_CLIENT_ID"] = "dt0s01.XXXX"
-os.environ["DTIAM_CLIENT_SECRET"] = "dt0s01.XXXX.YYYY"
-os.environ["DTIAM_ACCOUNT_UUID"] = "abc-123-def"
-
-# OR bearer token via environment variables
-os.environ["DTIAM_BEARER_TOKEN"] = "dt0c01.XXXX..."
-os.environ["DTIAM_ACCOUNT_UUID"] = "abc-123-def"
-
-# Create client from environment
-from dtiam.client import create_client_from_config
-client = create_client_from_config()  # Auto-detects auth method
+// Works with UUID or name
+group, err := resources.GetOrResolve(ctx, handler, "DevOps Team")
+// or
+group, err := resources.GetOrResolve(ctx, handler, "550e8400-e29b-41d4-a716-446655440000")
 ```
 
 ## Complete Example
 
-```python
-from dtiam.config import load_config
-from dtiam.client import create_client_from_config
-from dtiam.resources.groups import GroupHandler
-from dtiam.resources.policies import PolicyHandler
-from dtiam.resources.bindings import BindingHandler
-from dtiam.output import Printer, OutputFormat
+```go
+package main
 
-def main():
-    # Load configuration
-    config = load_config()
+import (
+    "context"
+    "fmt"
+    "log"
 
-    # Create client
-    with create_client_from_config(config, verbose=True) as client:
-        # Initialize handlers
-        group_handler = GroupHandler(client)
-        policy_handler = PolicyHandler(
-            client,
-            level_type="account",
-            level_id=client.account_uuid
-        )
-        binding_handler = BindingHandler(client)
+    "github.com/jtimothystewart/dtiam/internal/auth"
+    "github.com/jtimothystewart/dtiam/internal/client"
+    "github.com/jtimothystewart/dtiam/internal/output"
+    "github.com/jtimothystewart/dtiam/internal/resources"
+)
 
-        # Create a group
-        group = group_handler.create({
-            "name": "Platform Team",
-            "description": "Platform engineering team"
-        })
-        print(f"Created group: {group['name']}")
+func main() {
+    // Create token manager
+    tokenMgr := auth.NewOAuthTokenManager(
+        "dt0s01.XXXX",
+        "dt0s01.XXXX.YYYY",
+        "abc-123-def",
+    )
 
-        # Find a policy
-        policy = policy_handler.get_by_name("developer-policy")
-        if not policy:
-            print("Policy not found!")
-            return
+    // Create client
+    c := client.New("abc-123-def", tokenMgr)
+    defer c.Close()
 
-        # Create binding
-        binding_handler.create(
-            group_uuid=group["uuid"],
-            policy_uuid=policy["uuid"]
-        )
-        print(f"Bound policy: {policy['name']}")
+    ctx := context.Background()
 
-        # List all groups with output formatting
-        printer = Printer(format=OutputFormat.TABLE)
-        groups = group_handler.list()
-        printer.print(groups)
+    // Initialize handlers
+    groupHandler := resources.NewGroupHandler(c)
+    policyHandler := resources.NewPolicyHandler(c, "account", "abc-123-def")
+    bindingHandler := resources.NewBindingHandler(c)
 
-if __name__ == "__main__":
-    main()
+    // Create a group
+    group, err := groupHandler.Create(ctx, "Platform Team", "Platform engineering team")
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Created group: %s\n", group["name"])
+
+    // Find a policy
+    policy, err := policyHandler.GetByName(ctx, "developer-policy")
+    if err != nil {
+        log.Fatal(err)
+    }
+    if policy == nil {
+        log.Fatal("Policy not found!")
+    }
+
+    // Create binding
+    groupUUID := group["uuid"].(string)
+    policyUUID := policy["uuid"].(string)
+    err = bindingHandler.Create(ctx, groupUUID, policyUUID, nil)
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Printf("Bound policy: %s\n", policy["name"])
+
+    // List all groups with output formatting
+    printer := output.NewPrinter(output.FormatTable, false)
+    groups, _ := groupHandler.List(ctx, nil)
+    printer.Print(groups, output.GroupColumns())
+}
 ```
 
 ## See Also

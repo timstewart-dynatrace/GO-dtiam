@@ -6,25 +6,43 @@ A kubectl-inspired command-line interface for managing Dynatrace Identity and Ac
 
 ## Features
 
-- **kubectl-style commands** - Familiar syntax: `get`, `describe`, `create`, `delete`, `apply`
+- **kubectl-style commands** - Familiar syntax: `get`, `describe`, `create`, `delete`
 - **Multi-context configuration** - Manage multiple Dynatrace accounts with named contexts
 - **Rich output formats** - Table (default), JSON, YAML, CSV, and wide mode
 - **Flexible authentication** - OAuth2 (recommended) or bearer token support
 - **Bulk operations** - Process multiple resources from CSV/YAML files
-- **Template system** - Jinja2-style variable substitution for manifests
+- **Template system** - Variable substitution for manifests
 - **Permissions analysis** - Calculate effective permissions for users and groups
-- **Management zones** - Zone operations and group comparison *(legacy - see deprecation notice)*
-- **Caching** - In-memory cache with TTL for reduced API calls
+- **Cross-platform** - Single binary for Linux, macOS, and Windows
 
 ## Installation
 
-```bash
-# From source
-pip install -e .
+### From Source
 
-# Or install dependencies and use directly
-pip install typer[all] httpx pydantic pyyaml rich platformdirs
+```bash
+# Clone the repository
+git clone https://github.com/jtimothystewart/GO-IAM-CLI.git
+cd GO-IAM-CLI
+
+# Build the binary
+make build
+
+# Or install to $GOPATH/bin
+make install
+
+# Verify installation
+dtiam --version
 ```
+
+### From Releases
+
+Download the latest release for your platform from the [releases page](https://github.com/jtimothystewart/GO-IAM-CLI/releases).
+
+### Requirements
+
+- Go 1.22+ (for building from source)
+- Dynatrace Account with API access
+- Authentication: OAuth2 client credentials (recommended) OR bearer token
 
 ## Authentication
 
@@ -166,11 +184,6 @@ dtiam create binding --group "New Team" --policy "viewer-policy"
 | `user` | User management operations |
 | `service-user` | Service user (OAuth client) management |
 | `account` | Account limits and subscriptions |
-| `bulk` | Bulk operations for multiple resources |
-| `template` | Template-based resource creation |
-| `zones` | Management zone operations *(legacy)* |
-| `analyze` | Analyze permissions and policies |
-| `export` | Export resources and data |
 | `group` | Advanced group operations |
 | `boundary` | Boundary attach/detach operations |
 | `cache` | Cache management |
@@ -232,82 +245,68 @@ preferences:
 
 ## Examples
 
-### Bulk Operations
+### User Management
 
 ```bash
-# Add multiple users to a group from CSV
-dtiam bulk add-users --group "DevOps" --file users.csv
+# Create a user
+dtiam user create user@example.com --first-name John --last-name Doe
 
-# Remove users from group
-dtiam bulk remove-users --group "DevOps" --file users.csv
+# Add user to groups
+dtiam user add-to-groups user@example.com --groups "DevOps,Platform"
 
-# Create resources from YAML
-dtiam bulk create --file resources.yaml
+# List user's groups
+dtiam user list-groups user@example.com
+
+# Replace all group memberships
+dtiam user replace-groups user@example.com --groups "NewTeam"
 ```
 
-### Template System
+### Service User Management
 
 ```bash
-# List available templates
-dtiam template list
+# List service users
+dtiam service-user list
 
-# Render a template with variables
-dtiam template render team-setup \
-  --var team_name="Platform" \
-  --var policy_level="admin"
+# Create a service user (SAVE THE CREDENTIALS!)
+dtiam service-user create --name "CI Pipeline" --description "CI/CD automation"
 
-# Apply rendered template
-dtiam template apply team-setup \
-  --var team_name="Platform" \
-  --var policy_level="admin"
+# Add to group
+dtiam service-user add-to-group "CI Pipeline" --group DevOps
+
+# List groups
+dtiam service-user list-groups "CI Pipeline"
 ```
 
-### Permissions Analysis
+### Boundary Management
 
 ```bash
-# Get effective permissions for a user
-dtiam analyze user-permissions user@example.com
+# Attach a boundary to a binding
+dtiam boundary attach \
+  --group "DevOps Team" \
+  --policy "admin-policy" \
+  --boundary "production-boundary"
 
-# Get effective permissions for a group
-dtiam analyze group-permissions "DevOps Team"
+# Detach a boundary
+dtiam boundary detach \
+  --group "DevOps Team" \
+  --policy "admin-policy" \
+  --boundary "production-boundary"
 
-# Generate permissions matrix
-dtiam analyze permissions-matrix -o json > matrix.json
+# List all bindings using a boundary
+dtiam boundary list-attached "production-boundary"
 ```
 
-### Export
+### Account Information
 
 ```bash
-# Export everything
-dtiam export all --output-dir ./backup
+# View account limits and quotas
+dtiam account limits
 
-# Export specific group with dependencies
-dtiam export group "DevOps Team" --include-policies --include-members
-```
+# List subscriptions
+dtiam account subscriptions
 
-### Management Zones (Legacy)
-
-> **DEPRECATION NOTICE:** Management Zone features are provided for legacy purposes only and will be removed in a future release. Dynatrace is transitioning away from management zones in favor of other access control mechanisms.
-
-```bash
-# List all zones
-dtiam zones list
-
-# Compare zones with groups
-dtiam zones compare-groups
-```
-
-### Cache Management
-
-```bash
-# View cache statistics
-dtiam cache stats
-
-# Clear expired entries
-dtiam cache clear --expired-only
-
-# Clear all cache
-dtiam cache clear --force
+# Get usage forecast
+dtiam account forecast
 ```
 
 ## Documentation
@@ -330,17 +329,13 @@ Your OAuth2 client needs specific scopes for each operation. Create your client 
 | `get groups` | List/get groups | `account-idm-read` |
 | `create group` | Create group | `account-idm-write` |
 | `delete group` | Delete group | `account-idm-write` |
-| `group clone` | Clone group | `account-idm-read`, `account-idm-write` |
 | **Users** | | |
 | `get users` | List/get users | `account-idm-read` |
 | `user create` | Create user | `account-idm-write` |
-| `user delete` | Delete user | `account-idm-write` |
-| `user add-to-group` | Add to group | `account-idm-write` |
-| `user remove-from-group` | Remove from group | `account-idm-write` |
+| `user add-to-groups` | Add to groups | `account-idm-write` |
 | **Service Users** | | |
 | `service-user list` | List service users | `account-idm-read` |
 | `service-user create` | Create service user | `account-idm-write` |
-| `service-user update` | Update service user | `account-idm-write` |
 | `service-user delete` | Delete service user | `account-idm-write` |
 | **Policies** | | |
 | `get policies` | List/get policies | `iam-policies-management` or `iam:policies:read` |
@@ -353,17 +348,12 @@ Your OAuth2 client needs specific scopes for each operation. Create your client 
 | **Boundaries** | | |
 | `get boundaries` | List/get boundaries | `iam-policies-management` or `iam:boundaries:read` |
 | `create boundary` | Create boundary | `iam-policies-management` or `iam:boundaries:write` |
-| `delete boundary` | Delete boundary | `iam-policies-management` or `iam:boundaries:write` |
 | `boundary attach/detach` | Modify bindings | `iam-policies-management` or `iam:bindings:write` |
-| **Analysis** | | |
-| `analyze effective-user` | Effective permissions | `iam:effective-permissions:read` |
-| `analyze effective-group` | Effective permissions | `iam:effective-permissions:read` |
 | **Account** | | |
 | `account limits` | Account limits | `account-idm-read` |
 | `account subscriptions` | Subscriptions | Bearer token (auto) |
 | **Environments** | | |
 | `get environments` | List environments | `account-env-read` |
-| `zones list` | Management zones | `account-env-read` |
 
 ### Recommended Scope Sets
 
@@ -374,7 +364,6 @@ account-env-read
 iam:policies:read
 iam:bindings:read
 iam:boundaries:read
-iam:effective-permissions:read
 ```
 
 **Full IAM Management:**
@@ -383,7 +372,6 @@ account-idm-read
 account-idm-write
 account-env-read
 iam-policies-management
-iam:effective-permissions:read
 ```
 
 ## Environment Variables
@@ -398,11 +386,27 @@ iam:effective-permissions:read
 | `DTIAM_OUTPUT` | Default output format |
 | `DTIAM_VERBOSE` | Enable verbose mode |
 
-## Requirements
+## Building
 
-- Python 3.10+
-- Dynatrace Account with API access
-- Authentication: OAuth2 client credentials (recommended) OR bearer token
+```bash
+# Build for current platform
+make build
+
+# Build for all platforms
+make build-all
+
+# Run tests
+make test
+
+# Run linter
+make lint
+
+# Install locally
+make install
+
+# Clean build artifacts
+make clean
+```
 
 ## Disclaimer
 

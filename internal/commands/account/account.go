@@ -1,0 +1,173 @@
+// Package account provides account management commands.
+package account
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/spf13/cobra"
+
+	"github.com/jtimothystewart/dtiam/internal/cli"
+	"github.com/jtimothystewart/dtiam/internal/commands/common"
+	"github.com/jtimothystewart/dtiam/internal/output"
+	"github.com/jtimothystewart/dtiam/internal/resources"
+)
+
+// Cmd is the account command.
+var Cmd = &cobra.Command{
+	Use:   "account",
+	Short: "Account management commands",
+	Long:  "Commands for viewing account limits and subscriptions.",
+}
+
+func init() {
+	Cmd.AddCommand(limitsCmd)
+	Cmd.AddCommand(checkCapacityCmd)
+	Cmd.AddCommand(subscriptionsCmd)
+	Cmd.AddCommand(forecastCmd)
+}
+
+var limitsCmd = &cobra.Command{
+	Use:   "limits",
+	Short: "List account limits",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := common.CreateClient()
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+
+		handler := resources.NewLimitsHandler(c)
+		printer := cli.GlobalState.NewPrinter()
+		ctx := context.Background()
+
+		summary, _ := cmd.Flags().GetBool("summary")
+
+		if summary {
+			result, err := handler.GetSummary(ctx)
+			if err != nil {
+				return err
+			}
+
+			limits, ok := result["limits"].([]map[string]any)
+			if !ok {
+				return fmt.Errorf("failed to get limits")
+			}
+
+			fmt.Printf("Total limits: %v\n", result["total_limits"])
+			fmt.Printf("Near capacity: %v\n", result["limits_near_capacity"])
+			fmt.Printf("At capacity: %v\n", result["limits_at_capacity"])
+			fmt.Println()
+
+			return printer.Print(limits, output.LimitColumns())
+		}
+
+		limits, err := handler.List(ctx, nil)
+		if err != nil {
+			return err
+		}
+
+		return printer.Print(limits, output.LimitColumns())
+	},
+}
+
+func init() {
+	limitsCmd.Flags().Bool("summary", false, "Show summary with usage percentages")
+}
+
+var checkCapacityCmd = &cobra.Command{
+	Use:   "check-capacity LIMIT_NAME",
+	Short: "Check if there is capacity for additional resources",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		additional, _ := cmd.Flags().GetInt("additional")
+
+		c, err := common.CreateClient()
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+
+		handler := resources.NewLimitsHandler(c)
+		printer := cli.GlobalState.NewPrinter()
+		ctx := context.Background()
+
+		result, err := handler.CheckCapacity(ctx, args[0], additional)
+		if err != nil {
+			return err
+		}
+
+		return printer.PrintDetail(result)
+	},
+}
+
+func init() {
+	checkCapacityCmd.Flags().Int("additional", 1, "Number of additional resources to check")
+}
+
+var subscriptionsCmd = &cobra.Command{
+	Use:   "subscriptions [IDENTIFIER]",
+	Short: "List subscriptions or get a specific subscription",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := common.CreateClient()
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+
+		handler := resources.NewSubscriptionHandler(c)
+		printer := cli.GlobalState.NewPrinter()
+		ctx := context.Background()
+
+		if len(args) > 0 {
+			sub, err := handler.Get(ctx, args[0])
+			if err != nil {
+				sub, err = handler.GetByName(ctx, args[0])
+				if err != nil {
+					return err
+				}
+			}
+			if sub == nil {
+				return fmt.Errorf("subscription %q not found", args[0])
+			}
+			return printer.PrintDetail(sub)
+		}
+
+		subs, err := handler.List(ctx, nil)
+		if err != nil {
+			return err
+		}
+
+		return printer.Print(subs, output.SubscriptionColumns())
+	},
+}
+
+var forecastCmd = &cobra.Command{
+	Use:   "forecast [SUBSCRIPTION_UUID]",
+	Short: "Get subscription forecast",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := common.CreateClient()
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+
+		handler := resources.NewSubscriptionHandler(c)
+		printer := cli.GlobalState.NewPrinter()
+		ctx := context.Background()
+
+		var subUUID *string
+		if len(args) > 0 {
+			subUUID = &args[0]
+		}
+
+		forecast, err := handler.GetForecast(ctx, subUUID)
+		if err != nil {
+			return err
+		}
+
+		return printer.PrintDetail(forecast)
+	},
+}

@@ -1,0 +1,55 @@
+// Package cli provides the root CLI command and global state.
+package cli
+
+import (
+	"github.com/jtimothystewart/dtiam/internal/output"
+)
+
+// State holds the global CLI state.
+type State struct {
+	// Context is the context override from command line.
+	Context string
+	// Output is the output format.
+	Output output.Format
+	// Verbose enables verbose output.
+	Verbose bool
+	// Plain disables colors and interactive features.
+	Plain bool
+	// DryRun enables dry-run mode (preview without changes).
+	DryRun bool
+}
+
+// GlobalState is the global CLI state instance.
+var GlobalState = &State{
+	Output: output.FormatTable,
+}
+
+// GetContext returns the context override, or empty string if not set.
+func (s *State) GetContext() string {
+	return s.Context
+}
+
+// GetOutput returns the output format.
+func (s *State) GetOutput() output.Format {
+	return s.Output
+}
+
+// IsVerbose returns true if verbose mode is enabled.
+func (s *State) IsVerbose() bool {
+	return s.Verbose
+}
+
+// IsPlain returns true if plain mode is enabled.
+func (s *State) IsPlain() bool {
+	return s.Plain
+}
+
+// IsDryRun returns true if dry-run mode is enabled.
+func (s *State) IsDryRun() bool {
+	return s.DryRun
+}
+
+// NewPrinter creates a new printer with the current state settings.
+func (s *State) NewPrinter() *output.Printer {
+	return output.NewPrinter(s.Output, s.Plain)
+}

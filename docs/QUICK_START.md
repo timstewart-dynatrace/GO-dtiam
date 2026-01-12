@@ -6,7 +6,7 @@ This guide walks you through setting up dtiam and performing common IAM manageme
 
 ## Prerequisites
 
-- Python 3.10 or higher
+- Go 1.22+ (for building from source) or pre-built binary
 - Dynatrace account with Account Management API access
 - Authentication credentials (choose one):
   - **OAuth2 client credentials** (recommended for automation)
@@ -18,20 +18,31 @@ This guide walks you through setting up dtiam and performing common IAM manageme
 
 ```bash
 # Clone the repository
-git clone https://github.com/jtimothystewart/Python-IAM-Utility-3.0.git
-cd Python-IAM-Utility-3.0
+git clone https://github.com/jtimothystewart/GO-IAM-CLI.git
+cd GO-IAM-CLI
 
-# Install in development mode
-pip install -e .
+# Build the binary
+make build
 
-# Verify installation
+# The binary is created at ./bin/dtiam
+./bin/dtiam --version
+
+# Or install to $GOPATH/bin
+make install
 dtiam --version
 ```
 
-### Dependencies Only
+### From Releases
+
+Download the latest release for your platform from the [releases page](https://github.com/jtimothystewart/GO-IAM-CLI/releases).
 
 ```bash
-pip install typer[all] httpx pydantic pyyaml rich platformdirs
+# Linux/macOS - make executable
+chmod +x dtiam
+./dtiam --version
+
+# Move to PATH
+sudo mv dtiam /usr/local/bin/
 ```
 
 ## Authentication
@@ -54,7 +65,6 @@ Your OAuth2 client needs the following scopes for full functionality:
 | `account-idm-write` | Create, update, delete groups, users, and bindings |
 | `iam-policies-management` | Manage policies |
 | `account-env-read` | List environments |
-| `iam:effective-permissions:read` | Query effective permissions via resolution API |
 
 #### Step 1: Create OAuth2 Credentials
 
@@ -139,8 +149,8 @@ dtiam get groups -o json
 # List with additional columns
 dtiam get groups -o wide
 
-# Filter by name (partial match)
-dtiam get groups --name "DevOps"
+# Get a specific group
+dtiam get groups "DevOps Team"
 ```
 
 ### Viewing Resource Details
@@ -153,7 +163,6 @@ dtiam describe group "DevOps Team"
 # - Basic info (UUID, name, description)
 # - Member count and list
 # - Assigned policies
-# - Effective permissions
 
 # Describe a policy
 dtiam describe policy "admin-policy"
@@ -213,32 +222,25 @@ dtiam delete binding \
 
 ```bash
 # Create a new user
-dtiam user create --email user@example.com
+dtiam user create user@example.com
 
 # Create with name and groups
-dtiam user create \
-  --email user@example.com \
+dtiam user create user@example.com \
   --first-name John \
   --last-name Doe \
   --groups "DevOps Team,Platform Team"
 
-# Delete a user
-dtiam user delete user@example.com
+# Add a user to groups
+dtiam user add-to-groups user@example.com --groups "DevOps Team"
 
-# Delete without confirmation
-dtiam user delete user@example.com --force
-
-# Add a user to a group
-dtiam user add-to-group --user user@example.com --group "DevOps Team"
-
-# Remove from group
-dtiam user remove-from-group --user user@example.com --group "DevOps Team"
+# Remove from groups
+dtiam user remove-from-groups user@example.com --groups "DevOps Team"
 
 # List user's groups
 dtiam user list-groups user@example.com
 
-# View user details
-dtiam user info user@example.com
+# Replace all group memberships
+dtiam user replace-groups user@example.com --groups "NewTeam,AnotherTeam"
 ```
 
 ### Service User Management
@@ -252,12 +254,11 @@ dtiam service-user list
 # Create a service user (SAVE THE CREDENTIALS!)
 dtiam service-user create --name "CI Pipeline"
 
-# Create with groups and save credentials to file
+# Create with groups
 dtiam service-user create \
   --name "CI Pipeline" \
   --description "CI/CD automation" \
-  --groups "DevOps,Automation" \
-  --save-credentials creds.json
+  --groups "DevOps,Automation"
 
 # View service user details
 dtiam service-user get "CI Pipeline"
@@ -266,10 +267,10 @@ dtiam service-user get "CI Pipeline"
 dtiam service-user update "CI Pipeline" --description "Updated description"
 
 # Add to group
-dtiam service-user add-to-group --user "CI Pipeline" --group DevOps
+dtiam service-user add-to-group "CI Pipeline" --group DevOps
 
 # Remove from group
-dtiam service-user remove-from-group --user "CI Pipeline" --group DevOps
+dtiam service-user remove-from-group "CI Pipeline" --group DevOps
 
 # List groups
 dtiam service-user list-groups "CI Pipeline"
@@ -286,227 +287,29 @@ View account limits and subscription information.
 # View account limits and quotas
 dtiam account limits
 
-# Check capacity before adding resources
-dtiam account check-capacity maxUsers
-dtiam account check-capacity maxGroups --count 5
-
 # List subscriptions
 dtiam account subscriptions
 
-# Get subscription details
-dtiam account subscription my-subscription
-
 # Get usage forecast
 dtiam account forecast
-
-# List subscription capabilities
-dtiam account capabilities
 ```
 
 ## Advanced Operations
 
-### Bulk Operations
-
-#### Add Multiple Users
-
-Create a CSV file `users.csv`:
-```csv
-email
-user1@example.com
-user2@example.com
-user3@example.com
-```
-
-```bash
-dtiam bulk add-users --group "DevOps Team" --file users.csv
-```
-
-#### Create Multiple Resources
-
-Create a YAML file `resources.yaml`:
-```yaml
-groups:
-  - name: Team Alpha
-    description: Alpha team
-  - name: Team Beta
-    description: Beta team
-
-bindings:
-  - group: Team Alpha
-    policy: developer-policy
-  - group: Team Beta
-    policy: viewer-policy
-```
-
-```bash
-dtiam bulk create --file resources.yaml
-```
-
-### Template System
-
-Templates allow reusable resource definitions with variables.
-
-#### List Available Templates
-
-```bash
-dtiam template list
-```
-
-#### Create a Custom Template
-
-Create `~/.config/dtiam/templates/team-onboard.yaml`:
-```yaml
-name: team-onboard
-description: Onboard a new team with standard setup
-variables:
-  - name: team_name
-    description: Name of the team
-    required: true
-  - name: team_lead
-    description: Team lead email
-    required: true
-resources:
-  groups:
-    - name: "{{ team_name }}"
-      description: "{{ team_name }} team group"
-  bindings:
-    - group: "{{ team_name }}"
-      policy: developer-policy
-```
-
-#### Apply a Template
-
-```bash
-# Preview the rendered template
-dtiam template render team-onboard \
-  --var team_name="Platform" \
-  --var team_lead="lead@example.com"
-
-# Apply the template
-dtiam template apply team-onboard \
-  --var team_name="Platform" \
-  --var team_lead="lead@example.com"
-```
-
-### Permissions Analysis
-
-#### Effective Permissions (Resolution API)
-
-Query the Dynatrace resolution API for effective permissions:
-
-```bash
-# Get effective permissions for a user
-dtiam analyze effective-user admin@example.com
-
-# Get effective permissions for a group
-dtiam analyze effective-group "DevOps Team"
-
-# Filter by services
-dtiam analyze effective-user admin@example.com --services "settings,automation"
-
-# Specify level (account or environment)
-dtiam analyze effective-user admin@example.com --level environment --level-id env-id
-
-# Export to file
-dtiam analyze effective-user admin@example.com --export permissions.json
-
-# JSON output for processing
-dtiam analyze effective-user admin@example.com -o json
-```
-
-#### Calculated Permissions
-
-Analyze permissions from policies and bindings:
-
-```bash
-# See all permissions for a user
-dtiam analyze user-permissions admin@example.com
-
-# JSON output for processing
-dtiam analyze user-permissions admin@example.com -o json
-```
-
-#### Group Effective Permissions
-
-```bash
-dtiam analyze group-permissions "DevOps Team"
-```
-
-#### Permissions Matrix
-
-Generate a matrix showing which groups have which permissions:
-
-```bash
-# Table format
-dtiam analyze permissions-matrix
-
-# Export as JSON
-dtiam analyze permissions-matrix -o json > matrix.json
-```
-
-### Management Zones (Legacy)
-
-> **DEPRECATION NOTICE:** Management Zone features are provided for legacy purposes only and will be removed in a future release. Dynatrace is transitioning away from management zones in favor of other access control mechanisms.
-
-```bash
-# List all management zones
-dtiam zones list
-
-# Get zone details
-dtiam zones get "Production Zone"
-
-# Compare zones with groups (find naming mismatches)
-dtiam zones compare-groups
-```
-
-### Export Operations
-
-#### Full Backup
-
-```bash
-# Export everything to a directory
-dtiam export all --output-dir ./iam-backup
-
-# This creates:
-# ./iam-backup/groups.yaml
-# ./iam-backup/policies.yaml
-# ./iam-backup/bindings.yaml
-# ./iam-backup/users.yaml
-# ./iam-backup/environments.yaml
-```
-
-#### Selective Export
-
-```bash
-# Export a single group with dependencies
-dtiam export group "DevOps Team" \
-  --include-policies \
-  --include-members \
-  -o yaml > devops-team.yaml
-```
-
 ### Group Operations
 
-#### Clone a Group
-
 ```bash
-# Clone with policies but not members
-dtiam group clone "DevOps Team" \
-  --new-name "DevOps Team - Staging"
+# List members of a group
+dtiam group members "DevOps Team"
 
-# Clone with members
-dtiam group clone "DevOps Team" \
-  --new-name "DevOps Team - Copy" \
-  --include-members
-```
+# Add a member to a group
+dtiam group add-member "DevOps Team" --email user@example.com
 
-#### Quick Setup
+# Remove a member from a group
+dtiam group remove-member "DevOps Team" --user user-uid
 
-```bash
-# Create group with policy in one command
-dtiam group setup "New Team" \
-  --policy "developer-policy" \
-  --description "Newly created team"
+# List policy bindings for a group
+dtiam group bindings "DevOps Team"
 ```
 
 ### Boundary Management
@@ -528,30 +331,6 @@ dtiam boundary detach \
 dtiam boundary list-attached "production-boundary"
 ```
 
-### Cache Management
-
-dtiam caches API responses to reduce latency and API calls:
-
-```bash
-# View cache statistics
-dtiam cache stats
-
-# Clear expired entries only
-dtiam cache clear --expired-only
-
-# Clear entries by prefix
-dtiam cache clear --prefix groups
-
-# Clear all cache
-dtiam cache clear --force
-
-# View cache keys
-dtiam cache keys
-
-# Adjust default TTL (seconds)
-dtiam cache set-ttl 600
-```
-
 ## Output Formats
 
 dtiam supports multiple output formats:
@@ -568,7 +347,7 @@ dtiam supports multiple output formats:
 
 ```bash
 # JSON output for scripting
-dtiam get groups -o json | jq '.[] | .name'
+dtiam get groups -o json | jq '.[].name'
 
 # YAML for backup
 dtiam get policies -o yaml > policies.yaml
@@ -611,7 +390,7 @@ dtiam config use-context production
 dtiam --context development get groups
 
 # Check current context
-dtiam config current-context
+dtiam config get-contexts
 ```
 
 ## Troubleshooting
@@ -634,7 +413,6 @@ Preview changes without applying:
 ```bash
 dtiam --dry-run create group --name "Test"
 dtiam --dry-run delete group "Old Group"
-dtiam --dry-run bulk create --file resources.yaml
 ```
 
 ### Common Errors

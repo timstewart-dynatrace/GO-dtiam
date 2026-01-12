@@ -6,119 +6,167 @@ Technical design and implementation details for dtiam.
 
 ## Overview
 
-dtiam is a kubectl-inspired CLI for managing Dynatrace Identity and Access Management resources. It follows architectural patterns from the Python-dtctl project, using modern Python tooling and best practices.
+dtiam is a kubectl-inspired CLI for managing Dynatrace Identity and Access Management resources. It's written in Go using the Cobra CLI framework and follows idiomatic Go patterns for configuration, HTTP clients, and output formatting.
 
 ## Technology Stack
 
 | Component | Library | Purpose |
 |-----------|---------|---------|
-| CLI Framework | typer >= 0.9.0 | Modern CLI with type hints, auto-completion |
-| HTTP Client | httpx >= 0.27.0 | Async-capable HTTP with connection pooling |
-| Validation | pydantic >= 2.0 | Configuration and model validation |
-| Output | rich >= 13.0 | Tables, colors, progress bars |
-| Config Storage | platformdirs >= 4.0 | XDG Base Directory support |
-| YAML | pyyaml >= 6.0 | Configuration and manifest parsing |
+| CLI Framework | github.com/spf13/cobra | Command-line interface with subcommands |
+| Table Output | github.com/olekukonko/tablewriter | ASCII table formatting |
+| OAuth2 | golang.org/x/oauth2 | OAuth2 client credentials flow |
+| YAML | gopkg.in/yaml.v3 | Configuration and output formatting |
+| HTTP Client | net/http | HTTP requests with retry logic |
 
 ## Project Structure
 
 ```
-src/dtiam/
-├── __init__.py              # Package version
-├── cli.py                   # Main Typer app, global state, entry points
-├── config.py                # Pydantic config with multi-context support
-├── client.py                # httpx client with OAuth2 + retry logic
-├── output.py                # Rich formatters (table/json/yaml/csv)
-│
-├── commands/                # CLI command groups
-│   ├── __init__.py
-│   ├── config.py            # config set-context, use-context, view
-│   ├── get.py               # get groups, policies, users, bindings
-│   ├── describe.py          # describe group, policy, user (detailed)
-│   ├── create.py            # create group, policy, binding
-│   ├── delete.py            # delete group, policy, binding
-│   ├── user.py              # User management operations
-│   ├── service_user.py      # Service user (OAuth client) management
-│   ├── account.py           # Account limits and subscriptions
-│   ├── bulk.py              # Bulk operations from files
-│   ├── template.py          # Template-based resource creation
-│   ├── zones.py             # Management zone operations (legacy - will be removed)
-│   ├── analyze.py           # Permissions analysis
-│   ├── export.py            # Export operations
-│   ├── group.py             # Advanced group operations
-│   ├── boundary.py          # Boundary attach/detach
-│   └── cache.py             # Cache management
-│
-├── resources/               # Resource handlers (API logic)
-│   ├── __init__.py
-│   ├── base.py              # ResourceHandler ABC, CRUDHandler
-│   ├── groups.py            # GroupHandler
-│   ├── policies.py          # PolicyHandler
-│   ├── users.py             # UserHandler
-│   ├── service_users.py     # ServiceUserHandler
-│   ├── bindings.py          # BindingHandler
-│   ├── boundaries.py        # BoundaryHandler
-│   ├── environments.py      # EnvironmentHandler
-│   ├── zones.py             # ZoneHandler (legacy - will be removed)
-│   ├── limits.py            # AccountLimitsHandler
-│   └── subscriptions.py     # SubscriptionHandler
-│
-└── utils/
-    ├── __init__.py
-    ├── auth.py              # OAuth2 token management
-    ├── resolver.py          # Name-to-UUID resolution
-    ├── templates.py         # Template rendering (Jinja2-style)
-    ├── permissions.py       # Effective permissions calculation
-    └── cache.py             # In-memory caching with TTL
+dtiam/
+├── cmd/dtiam/
+│   └── main.go                      # Entry point
+├── internal/
+│   ├── cli/
+│   │   ├── root.go                  # Root Cobra command, global flags
+│   │   └── state.go                 # Global state (context, output, verbose)
+│   ├── commands/
+│   │   ├── common/
+│   │   │   └── client.go            # Shared client creation
+│   │   ├── config/
+│   │   │   └── config.go            # Config management commands
+│   │   ├── get/
+│   │   │   ├── get.go               # Get subcommands
+│   │   │   └── helpers.go           # Helper functions
+│   │   ├── describe/
+│   │   │   ├── describe.go          # Describe subcommands
+│   │   │   └── helpers.go           # Helper functions
+│   │   ├── create/
+│   │   │   └── create.go            # Create subcommands
+│   │   ├── delete/
+│   │   │   └── delete.go            # Delete subcommands
+│   │   ├── user/
+│   │   │   └── user.go              # User management commands
+│   │   ├── serviceuser/
+│   │   │   └── serviceuser.go       # Service user commands
+│   │   ├── group/
+│   │   │   └── group.go             # Advanced group operations
+│   │   ├── boundary/
+│   │   │   └── boundary.go          # Boundary attach/detach
+│   │   ├── account/
+│   │   │   └── account.go           # Account limits/subscriptions
+│   │   └── cache/
+│   │       └── cache.go             # Cache management
+│   ├── config/
+│   │   ├── config.go                # Config, Context, Credential structs
+│   │   └── loader.go                # Load/save YAML, XDG paths
+│   ├── client/
+│   │   ├── client.go                # HTTP client with retry logic
+│   │   └── errors.go                # APIError type
+│   ├── auth/
+│   │   ├── auth.go                  # TokenProvider interface
+│   │   ├── oauth.go                 # OAuthTokenManager
+│   │   └── bearer.go                # StaticTokenManager
+│   ├── resources/
+│   │   ├── handler.go               # BaseHandler, interfaces
+│   │   ├── groups.go                # GroupHandler
+│   │   ├── users.go                 # UserHandler
+│   │   ├── policies.go              # PolicyHandler
+│   │   ├── bindings.go              # BindingHandler
+│   │   ├── boundaries.go            # BoundaryHandler
+│   │   ├── environments.go          # EnvironmentHandler
+│   │   ├── serviceusers.go          # ServiceUserHandler
+│   │   ├── limits.go                # LimitsHandler
+│   │   └── subscriptions.go         # SubscriptionHandler
+│   └── output/
+│       ├── format.go                # Format enum (table/json/yaml/csv)
+│       ├── columns.go               # Column definitions per resource
+│       ├── table.go                 # TableFormatter
+│       └── printer.go               # Unified Printer
+├── pkg/
+│   └── version/
+│       └── version.go               # Version info (set via ldflags)
+├── go.mod
+├── Makefile
+└── .goreleaser.yaml
 ```
 
 ## Core Components
 
-### CLI Entry Point (`cli.py`)
+### CLI Entry Point (`cmd/dtiam/main.go`)
 
-The main entry point uses Typer to create a hierarchical command structure:
+The main entry point initializes the root command and registers all subcommands:
 
-```python
-app = typer.Typer(
-    name="dtiam",
-    help="A kubectl-inspired CLI for Dynatrace IAM.",
-    add_completion=True,
-    no_args_is_help=True,
-    rich_markup_mode="rich",
-)
+```go
+func main() {
+    rootCmd := cli.NewRootCmd()
 
-# Global state for shared options
-class State:
-    context: str | None = None
-    output: OutputFormat = OutputFormat.TABLE
-    verbose: bool = False
-    plain: bool = False
-    dry_run: bool = False
+    // Register command groups
+    rootCmd.AddCommand(configcmd.Cmd)
+    rootCmd.AddCommand(getcmd.Cmd)
+    rootCmd.AddCommand(describecmd.Cmd)
+    rootCmd.AddCommand(createcmd.Cmd)
+    rootCmd.AddCommand(deletecmd.Cmd)
+    rootCmd.AddCommand(usercmd.Cmd)
+    rootCmd.AddCommand(serviceusercmd.Cmd)
+    rootCmd.AddCommand(groupcmd.Cmd)
+    rootCmd.AddCommand(boundarycmd.Cmd)
+    rootCmd.AddCommand(accountcmd.Cmd)
+    rootCmd.AddCommand(cachecmd.Cmd)
 
-state = State()
+    if err := rootCmd.Execute(); err != nil {
+        os.Exit(1)
+    }
+}
 ```
 
-Commands access global state via the module-level `state` object:
+### Global State (`internal/cli/state.go`)
 
-```python
-from dtiam.cli import state
+Global state is managed through a singleton that commands access:
 
-def some_command():
-    if state.dry_run:
-        console.print("Dry-run mode...")
+```go
+type State struct {
+    context  string
+    output   output.Format
+    verbose  bool
+    plain    bool
+    dryRun   bool
+}
+
+var GlobalState = &State{}
+
+func (s *State) SetContext(ctx string)     { s.context = ctx }
+func (s *State) GetContext() string        { return s.context }
+func (s *State) SetOutput(f output.Format) { s.output = f }
+func (s *State) GetOutput() output.Format  { return s.output }
+func (s *State) IsDryRun() bool            { return s.dryRun }
+func (s *State) IsVerbose() bool           { return s.verbose }
+func (s *State) NewPrinter() *output.Printer {
+    return output.NewPrinter(s.output, s.plain)
+}
 ```
 
-### Configuration System (`config.py`)
+### Configuration System (`internal/config/`)
 
-Configuration follows the kubectl config pattern with Pydantic models:
+Configuration follows the kubectl config pattern:
 
-```python
-class Config(BaseModel):
-    api_version: str = Field(default="v1", alias="api-version")
-    kind: str = Field(default="Config")
-    current_context: str = Field(default="", alias="current-context")
-    contexts: list[NamedContext] = Field(default_factory=list)
-    credentials: list[NamedCredential] = Field(default_factory=list)
-    preferences: Preferences = Field(default_factory=Preferences)
+```go
+type Config struct {
+    APIVersion     string            `yaml:"api-version"`
+    Kind           string            `yaml:"kind"`
+    CurrentContext string            `yaml:"current-context"`
+    Contexts       []NamedContext    `yaml:"contexts"`
+    Credentials    []NamedCredential `yaml:"credentials"`
+    Preferences    Preferences       `yaml:"preferences,omitempty"`
+}
+
+type Context struct {
+    AccountUUID    string `yaml:"account-uuid"`
+    CredentialsRef string `yaml:"credentials-ref"`
+}
+
+type Credential struct {
+    ClientID     string `yaml:"client-id"`
+    ClientSecret string `yaml:"client-secret"`
+}
 ```
 
 **Storage Location:** `~/.config/dtiam/config` (XDG Base Directory compliant)
@@ -132,8 +180,9 @@ class Config(BaseModel):
 | `DTIAM_CLIENT_ID` | OAuth2 client ID |
 | `DTIAM_CLIENT_SECRET` | OAuth2 client secret |
 | `DTIAM_ACCOUNT_UUID` | Account UUID |
+| `DTIAM_BEARER_TOKEN` | Static bearer token |
 
-### HTTP Client (`client.py`)
+### HTTP Client (`internal/client/`)
 
 The client provides:
 - OAuth2 authentication with automatic token refresh
@@ -141,137 +190,132 @@ The client provides:
 - Rate limit handling (429 responses with Retry-After)
 - Verbose logging for debugging
 
-```python
-class Client:
-    def __init__(
-        self,
-        account_uuid: str,
-        token_manager: TokenManager,
-        timeout: float = 30.0,
-        retry_config: RetryConfig | None = None,
-        verbose: bool = False,
-    ):
-        self.base_url = f"{IAM_API_BASE}/accounts/{account_uuid}"
-        self._client = httpx.Client(
-            timeout=timeout,
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": "dtiam/3.0.0",
-            },
-        )
+```go
+type Client struct {
+    httpClient   *http.Client
+    baseURL      string
+    accountUUID  string
+    tokenManager TokenProvider
+    retryConfig  RetryConfig
+    verbose      bool
+}
 
-    def request(self, method: str, path: str, **kwargs) -> httpx.Response:
-        # Automatic retry with exponential backoff
-        for attempt in range(self.retry_config.max_retries + 1):
-            headers = {**self._get_auth_headers(), **kwargs.pop("headers", {})}
-            response = self._client.request(method, url, headers=headers, **kwargs)
+type RetryConfig struct {
+    MaxRetries      int
+    InitialDelay    time.Duration
+    MaxDelay        time.Duration
+    ExponentialBase float64
+    RetryStatuses   []int
+}
 
-            if response.is_success:
-                return response
+func (c *Client) Do(method, path string, body interface{}) (*http.Response, error) {
+    for attempt := 0; attempt <= c.retryConfig.MaxRetries; attempt++ {
+        req, _ := c.newRequest(method, path, body)
+        resp, err := c.httpClient.Do(req)
 
-            if not self._should_retry(response.status_code):
-                raise APIError(...)
+        if err == nil && !c.shouldRetry(resp.StatusCode) {
+            return resp, nil
+        }
 
-            delay = self._get_retry_delay(attempt, response)
-            time.sleep(delay)
+        delay := c.getRetryDelay(attempt, resp)
+        time.Sleep(delay)
+    }
+    return nil, errors.New("max retries exceeded")
+}
 ```
 
 **Retry Configuration:**
 - Default retries: 3
 - Retry status codes: 429, 500, 502, 503, 504
 - Initial delay: 1.0 seconds
-- Max delay: 10.0 seconds
+- Max delay: 30.0 seconds
 - Exponential base: 2.0
 
-### Resource Handlers (`resources/`)
+### Resource Handlers (`internal/resources/`)
 
-Resource handlers follow a consistent pattern with a base class:
+Resource handlers follow a consistent pattern with interfaces:
 
-```python
-class ResourceHandler(ABC, Generic[T]):
-    def __init__(self, client: Client):
-        self.client = client
+```go
+type Handler interface {
+    ResourceName() string
+}
 
-    @property
-    @abstractmethod
-    def resource_name(self) -> str:
-        """Human-readable resource name."""
-        pass
+type Lister interface {
+    Handler
+    List(ctx context.Context, params map[string]string) ([]map[string]any, error)
+}
 
-    @property
-    @abstractmethod
-    def api_path(self) -> str:
-        """Base API path for this resource."""
-        pass
+type Getter interface {
+    Handler
+    Get(ctx context.Context, id string) (map[string]any, error)
+    GetByName(ctx context.Context, name string) (map[string]any, error)
+}
 
-class CRUDHandler(ResourceHandler[T]):
-    def list(self, **params) -> list[dict]:
-        response = self.client.get(self.api_path, params=params)
-        return response.json().get(self.list_key, [])
+type Creator interface {
+    Handler
+    Create(ctx context.Context, data map[string]any) (map[string]any, error)
+}
 
-    def get(self, resource_id: str) -> dict:
-        response = self.client.get(f"{self.api_path}/{resource_id}")
-        return response.json()
+type Deleter interface {
+    Handler
+    Delete(ctx context.Context, id string) error
+}
 
-    def create(self, data: dict) -> dict:
-        response = self.client.post(self.api_path, json=data)
-        return response.json()
-
-    def update(self, resource_id: str, data: dict) -> dict:
-        response = self.client.put(f"{self.api_path}/{resource_id}", json=data)
-        return response.json()
-
-    def delete(self, resource_id: str) -> bool:
-        self.client.delete(f"{self.api_path}/{resource_id}")
-        return True
-
-    def get_by_name(self, name: str) -> dict | None:
-        for item in self.list():
-            if item.get("name") == name:
-                return item
-        return None
+type BaseHandler struct {
+    client   *client.Client
+    name     string
+    basePath string
+    listKey  string
+}
 ```
 
 Each resource handler implements additional operations specific to that resource type.
 
-### Output Formatting (`output.py`)
+### Output Formatting (`internal/output/`)
 
 The output system uses a strategy pattern:
 
-```python
-class OutputFormat(str, Enum):
-    TABLE = "table"
-    WIDE = "wide"
-    JSON = "json"
-    YAML = "yaml"
-    CSV = "csv"
-    PLAIN = "plain"
+```go
+type Format int
 
-class Formatter(ABC):
-    @abstractmethod
-    def format(self, data: Any, columns: list[Column] | None = None) -> str:
-        pass
+const (
+    FormatTable Format = iota
+    FormatWide
+    FormatJSON
+    FormatYAML
+    FormatCSV
+    FormatPlain
+)
 
-class Printer:
-    def __init__(self, format: OutputFormat, plain: bool = False):
-        self._formatters = {
-            OutputFormat.TABLE: TableFormatter(wide=False, plain=plain),
-            OutputFormat.WIDE: TableFormatter(wide=True, plain=plain),
-            OutputFormat.JSON: JSONFormatter(),
-            OutputFormat.YAML: YAMLFormatter(),
-            OutputFormat.CSV: CSVFormatter(),
-            OutputFormat.PLAIN: PlainFormatter(),
-        }
+type Column struct {
+    Key      string
+    Header   string
+    WideOnly bool
+}
 
-    def print(self, data: Any, columns: list[Column] | None = None):
-        formatter = self._formatters[self.format]
-        output = formatter.format(data, columns)
-        print(output)
+type Printer struct {
+    format Format
+    plain  bool
+}
+
+func (p *Printer) Print(data []map[string]any, columns []Column) error {
+    switch p.format {
+    case FormatJSON:
+        return p.printJSON(data)
+    case FormatYAML:
+        return p.printYAML(data)
+    case FormatCSV:
+        return p.printCSV(data, columns)
+    case FormatTable, FormatWide:
+        return p.printTable(data, columns, p.format == FormatWide)
+    default:
+        return p.printJSON(data)
+    }
+}
 ```
 
 Column definitions support:
 - Custom headers
-- Value formatters
 - Wide-only columns (hidden in default table view)
 - Nested key access with dot notation
 
@@ -282,25 +326,25 @@ Column definitions support:
 ```
 User Input
     ↓
-Typer CLI (cli.py)
+Cobra CLI (cli/root.go)
     ↓
-Global State Population
+Global State Population (cli/state.go)
     ↓
-Command Handler (commands/*.py)
+Command Handler (commands/*.go)
     ↓
-Configuration Loading (config.py)
+Configuration Loading (config/loader.go)
     ↓
-Client Creation (client.py)
+Client Creation (client/client.go)
     ↓
-OAuth2 Token Acquisition (utils/auth.py)
+OAuth2 Token Acquisition (auth/oauth.go)
     ↓
-Resource Handler (resources/*.py)
+Resource Handler (resources/*.go)
     ↓
 API Request with Retry
     ↓
 Response Processing
     ↓
-Output Formatting (output.py)
+Output Formatting (output/printer.go)
     ↓
 User Output
 ```
@@ -308,7 +352,7 @@ User Output
 ### Authentication Flow
 
 ```
-TokenManager.get_headers()
+TokenProvider.GetToken()
     ↓
 Check Token Cache
     ↓ (expired or missing)
@@ -328,6 +372,8 @@ Base URL: `https://api.dynatrace.com/iam/v1/accounts/{account_uuid}`
 |----------|----------|
 | Groups | `/groups` |
 | Users | `/users` |
+| Service Users | `/service-users` |
+| Limits | `/limits` |
 | Environments | `/environments` |
 | Policies | `/repo/{levelType}/{levelId}/policies` |
 | Bindings | `/repo/{levelType}/{levelId}/bindings` |
@@ -338,171 +384,151 @@ Policy levels:
 - `environment/{env_id}` - Environment-specific policies
 - `global/global` - Global (Dynatrace-managed) policies
 
-## Caching
-
-In-memory caching reduces API calls for frequently accessed data:
-
-```python
-class Cache:
-    _instance: "Cache | None" = None  # Singleton
-
-    def __init__(self):
-        self._cache: dict[str, CacheEntry] = {}
-        self._hits: int = 0
-        self._misses: int = 0
-        self._default_ttl: int = 300  # 5 minutes
-
-    def get(self, key: str) -> Any | None:
-        entry = self._cache.get(key)
-        if entry is None or time.time() > entry.expires_at:
-            self._misses += 1
-            return None
-        self._hits += 1
-        return entry.value
-
-    def set(self, key: str, value: Any, ttl: int | None = None):
-        self._cache[key] = CacheEntry(
-            value=value,
-            expires_at=time.time() + (ttl or self._default_ttl),
-        )
-```
-
-Usage with decorator:
-
-```python
-@cached(ttl=300, prefix="groups")
-def get_groups():
-    return client.get("/groups").json()
-```
-
-## Template System
-
-Templates use Jinja2-style variable substitution:
-
-```python
-class TemplateRenderer:
-    def render(self, template: dict, variables: dict) -> dict:
-        # Recursively process template
-        if isinstance(template, str):
-            return self._render_string(template, variables)
-        elif isinstance(template, dict):
-            return {k: self.render(v, variables) for k, v in template.items()}
-        elif isinstance(template, list):
-            return [self.render(item, variables) for item in template]
-        return template
-
-    def _render_string(self, template_str: str, variables: dict) -> str:
-        # Handle {{ variable }} and {{ variable | default('value') }}
-        pattern = r'\{\{\s*(\w+)(?:\s*\|\s*default\([\'"]([^\'"]*)[\'\"]\))?\s*\}\}'
-        ...
-```
-
-Templates are stored at `~/.config/dtiam/templates/`.
-
 ## Error Handling
 
 Errors are categorized and handled consistently:
 
-```python
-class APIError(Exception):
-    def __init__(self, message: str, status_code: int | None, response_body: str | None):
-        ...
+```go
+type APIError struct {
+    Message      string
+    StatusCode   int
+    ResponseBody string
+}
 
-class ResourceHandler:
-    def _handle_error(self, operation: str, error: APIError):
-        if error.status_code == 404:
-            raise ValueError(f"{self.resource_name.title()} not found")
-        elif error.status_code == 403:
-            raise PermissionError(f"Permission denied for {operation}")
-        elif error.status_code == 409:
-            raise ValueError(f"Conflict: {self.resource_name} already exists")
-        else:
-            raise RuntimeError(f"Failed to {operation}: {error}")
+func (e *APIError) Error() string {
+    return fmt.Sprintf("%s (status %d)", e.Message, e.StatusCode)
+}
+
+func (e *APIError) IsNotFound() bool {
+    return e.StatusCode == 404
+}
+
+func (e *APIError) IsForbidden() bool {
+    return e.StatusCode == 403
+}
+
+func (e *APIError) IsConflict() bool {
+    return e.StatusCode == 409
+}
 ```
 
-## Testing
+## Building
 
-The project uses pytest with the following structure:
+The project uses a Makefile for common operations:
 
-```
-tests/
-├── conftest.py           # Shared fixtures
-├── test_config.py        # Configuration tests
-├── test_client.py        # HTTP client tests
-├── test_resources/       # Resource handler tests
-│   ├── test_groups.py
-│   ├── test_policies.py
-│   └── ...
-└── test_commands/        # CLI command tests
-    ├── test_get.py
-    ├── test_describe.py
-    └── ...
-```
+```makefile
+# Build for current platform
+build:
+    go build -ldflags "$(LDFLAGS)" -o bin/dtiam ./cmd/dtiam
 
-Run tests:
-```bash
-pytest tests/ -v
-pytest tests/ --cov=dtiam
+# Build for all platforms
+build-all:
+    GOOS=linux GOARCH=amd64 go build ...
+    GOOS=darwin GOARCH=amd64 go build ...
+    GOOS=darwin GOARCH=arm64 go build ...
+    GOOS=windows GOARCH=amd64 go build ...
+
+# Run tests
+test:
+    go test -v ./...
+
+# Run linter
+lint:
+    golangci-lint run
+
+# Install locally
+install:
+    go install ./cmd/dtiam
 ```
 
 ## Extensibility
 
 ### Adding a New Resource
 
-1. Create handler in `resources/`:
-```python
-class NewResourceHandler(CRUDHandler[Any]):
-    @property
-    def resource_name(self) -> str:
-        return "new-resource"
+1. Create handler in `internal/resources/`:
+```go
+type NewResourceHandler struct {
+    *BaseHandler
+}
 
-    @property
-    def api_path(self) -> str:
-        return "/new-resources"
+func NewNewResourceHandler(c *client.Client) *NewResourceHandler {
+    return &NewResourceHandler{
+        BaseHandler: &BaseHandler{
+            client:   c,
+            name:     "new-resource",
+            basePath: "/new-resources",
+            listKey:  "items",
+        },
+    }
+}
+
+func (h *NewResourceHandler) List(ctx context.Context, params map[string]string) ([]map[string]any, error) {
+    return h.BaseHandler.List(ctx, params)
+}
 ```
 
-2. Add column definitions in `output.py`:
-```python
-def new_resource_columns() -> list[Column]:
-    return [
-        Column("uuid", "UUID"),
-        Column("name", "NAME"),
-    ]
+2. Add column definitions in `internal/output/columns.go`:
+```go
+func NewResourceColumns() []Column {
+    return []Column{
+        {Key: "uuid", Header: "UUID"},
+        {Key: "name", Header: "NAME"},
+    }
+}
 ```
 
-3. Create commands in `commands/`:
-```python
-@app.command("new-resources")
-def get_new_resources():
-    handler = NewResourceHandler(client)
-    results = handler.list()
-    printer.print(results, new_resource_columns())
+3. Create commands in `internal/commands/`:
+```go
+var getNewResourceCmd = &cobra.Command{
+    Use:   "new-resources",
+    Short: "List new resources",
+    RunE: func(cmd *cobra.Command, args []string) error {
+        c, _ := common.CreateClient()
+        defer c.Close()
+
+        handler := resources.NewNewResourceHandler(c)
+        results, _ := handler.List(context.Background(), nil)
+
+        printer := cli.GlobalState.NewPrinter()
+        return printer.Print(results, output.NewResourceColumns())
+    },
+}
 ```
 
-4. Register in `cli.py`:
-```python
-app.add_typer(new_cmd.app, name="new-resource", help="New resource operations")
+4. Register in `cmd/dtiam/main.go`:
+```go
+getcmd.Cmd.AddCommand(getNewResourceCmd)
 ```
 
 ### Adding a New Output Format
 
-1. Create formatter in `output.py`:
-```python
-class XMLFormatter(Formatter):
-    def format(self, data: Any, columns: list[Column] | None = None) -> str:
-        # Convert data to XML
-        ...
+1. Add to Format enum in `internal/output/format.go`:
+```go
+const (
+    FormatXML Format = iota + 10
+)
 ```
 
-2. Add to OutputFormat enum:
-```python
-class OutputFormat(str, Enum):
-    XML = "xml"
+2. Implement formatting in `internal/output/printer.go`:
+```go
+func (p *Printer) printXML(data []map[string]any) error {
+    // Convert data to XML
+    ...
+}
 ```
 
-3. Register in Printer:
-```python
-self._formatters[OutputFormat.XML] = XMLFormatter()
+3. Add case to Print switch statement:
+```go
+case FormatXML:
+    return p.printXML(data)
+```
+
+## Testing
+
+Run tests with:
+```bash
+go test -v ./...
+go test -cover ./...
 ```
 
 ## See Also
