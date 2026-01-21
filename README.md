@@ -187,6 +187,9 @@ dtiam create binding --group "New Team" --policy "viewer-policy"
 | `group` | Advanced group operations |
 | `boundary` | Boundary attach/detach operations |
 | `cache` | Cache management |
+| `bulk` | Bulk operations from CSV/YAML/JSON files |
+| `export` | Export resources for backup/migration |
+| `analyze` | Permission analysis and compliance checks |
 
 ## Resources
 

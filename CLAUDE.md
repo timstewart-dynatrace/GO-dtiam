@@ -308,7 +308,10 @@ dtiam/
 │   │   ├── group/                    # Advanced group ops
 │   │   ├── boundary/                 # Boundary attach/detach
 │   │   ├── account/                  # Limits and subscriptions
-│   │   └── cache/                    # Cache management
+│   │   ├── cache/                    # Cache management
+│   │   ├── bulk/                     # Bulk operations from files
+│   │   ├── export/                   # Export resources for backup
+│   │   └── analyze/                  # Permission analysis commands
 │   ├── config/
 │   │   ├── config.go                 # Config structs
 │   │   └── loader.go                 # Config load/save, XDG paths
@@ -336,7 +339,10 @@ dtiam/
 │   │   ├── table.go                  # Table formatter
 │   │   └── columns.go                # Column definitions
 │   └── utils/
-│       └── resolver.go               # Name-to-UUID resolution
+│       ├── resolver.go               # Name-to-UUID resolution
+│       ├── permissions.go            # Permissions calculator
+│       ├── matrix.go                 # Permissions matrix generator
+│       └── effective.go              # Effective permissions API client
 ├── pkg/version/version.go            # Version info
 ├── go.mod
 ├── Makefile
@@ -646,18 +652,44 @@ Level types: `account`, `environment`, `global`
 | `GET /subscriptions` | List subscriptions | `SubscriptionHandler.List()` |
 | `GET /environments` | List environments | `EnvironmentHandler.List()` |
 
+### Bulk Operations
+
+| Command | Description | Handler |
+|---------|-------------|---------|
+| `bulk add-users-to-group` | Add users from file | `bulk.addUsersToGroupCmd` |
+| `bulk remove-users-from-group` | Remove users from file | `bulk.removeUsersFromGroupCmd` |
+| `bulk create-groups` | Create groups from file | `bulk.createGroupsCmd` |
+| `bulk create-bindings` | Create bindings from file | `bulk.createBindingsCmd` |
+| `bulk export-group-members` | Export group members | `bulk.exportGroupMembersCmd` |
+
+### Export Operations
+
+| Command | Description | Handler |
+|---------|-------------|---------|
+| `export all` | Export all resources | `export.allCmd` |
+| `export group` | Export single group | `export.groupCmd` |
+| `export policy` | Export single policy | `export.policyCmd` |
+
+### Analyze Operations
+
+| Command | Description | Handler |
+|---------|-------------|---------|
+| `analyze user-permissions` | Calculate user permissions | `analyze.userPermissionsCmd` |
+| `analyze group-permissions` | Calculate group permissions | `analyze.groupPermissionsCmd` |
+| `analyze permissions-matrix` | Generate permissions matrix | `analyze.permissionsMatrixCmd` |
+| `analyze policy` | Analyze policy permissions | `analyze.policyCmd` |
+| `analyze least-privilege` | Least privilege compliance | `analyze.leastPrivilegeCmd` |
+| `analyze effective-user` | Get user permissions via API | `analyze.effectiveUserCmd` |
+| `analyze effective-group` | Get group permissions via API | `analyze.effectiveGroupCmd` |
+
 ### Not Yet Implemented (from Python version)
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| `bulk` commands | Bulk operations from CSV/YAML | High |
 | `template` commands | Template-based resource creation | Medium |
-| `analyze` commands | Permissions analysis | Medium |
-| `export` commands | Export resources to files | Medium |
 | `get apps` | App Engine Registry integration | Low |
 | `get schemas` | Settings schema listing | Low |
 | Caching | In-memory caching with TTL | Low |
-| Permissions calculation | Effective permissions for users/groups | Medium |
 
 ## Configuration
 

@@ -19,6 +19,9 @@ Complete reference for all dtiam commands and their options.
 - [boundary](#boundary) - Boundary management
 - [account](#account) - Account limits and subscriptions
 - [cache](#cache) - Cache management
+- [bulk](#bulk) - Bulk operations from files
+- [export](#export) - Export resources for backup/migration
+- [analyze](#analyze) - Permission analysis and compliance
 
 ---
 
@@ -808,10 +811,42 @@ Account limits and subscription information.
 List account limits and quotas.
 
 ```bash
-dtiam account limits [--output FORMAT]
+dtiam account limits [OPTIONS]
 ```
 
+| Option      | Description                         |
+| ----------- | ----------------------------------- |
+| `--summary` | Show summary with usage percentages |
+| `--output`  | Output format                       |
+
 Shows current usage and maximum allowed values for account resources like users, groups, and environments.
+
+**Examples:**
+
+```bash
+dtiam account limits
+dtiam account limits --summary
+```
+
+### account check-capacity
+
+Check if there is capacity for additional resources.
+
+```bash
+dtiam account check-capacity LIMIT_NAME [OPTIONS]
+```
+
+| Argument/Option | Description                                          |
+| --------------- | ---------------------------------------------------- |
+| `LIMIT_NAME`    | Name of the limit to check (required)                |
+| `--additional`  | Number of additional resources to check (default: 1) |
+
+**Examples:**
+
+```bash
+dtiam account check-capacity user-limit
+dtiam account check-capacity group-limit --additional 5
+```
 
 ### account subscriptions
 
@@ -851,6 +886,385 @@ Clear cache entries.
 
 ```bash
 dtiam cache clear
+```
+
+---
+
+## bulk
+
+Bulk operations for managing multiple IAM resources from files.
+
+### bulk add-users-to-group
+
+Add multiple users to a group from a file.
+
+```bash
+dtiam bulk add-users-to-group [OPTIONS]
+```
+
+| Option              | Short | Description                                    |
+| ------------------- | ----- | ---------------------------------------------- |
+| `--file`            | `-f`  | File with user emails (JSON, YAML, or CSV)     |
+| `--group`           | `-g`  | Group UUID or name                             |
+| `--email-field`     | `-e`  | Field name containing email addresses (default: "email") |
+| `--continue-on-error` |     | Continue processing on errors                  |
+
+**File Format Examples:**
+
+JSON/YAML:
+```json
+[{"email": "user1@example.com"}, {"email": "user2@example.com"}]
+```
+
+CSV:
+```csv
+email
+user1@example.com
+user2@example.com
+```
+
+**Examples:**
+
+```bash
+dtiam bulk add-users-to-group --file users.csv --group "DevOps Team"
+dtiam bulk add-users-to-group -f users.json -g DevOps --continue-on-error
+```
+
+### bulk remove-users-from-group
+
+Remove multiple users from a group from a file.
+
+```bash
+dtiam bulk remove-users-from-group [OPTIONS]
+```
+
+| Option              | Short | Description                                    |
+| ------------------- | ----- | ---------------------------------------------- |
+| `--file`            | `-f`  | File with user emails/UIDs (JSON, YAML, or CSV)|
+| `--group`           | `-g`  | Group UUID or name                             |
+| `--user-field`      | `-u`  | Field name containing email or UID (default: "email") |
+| `--continue-on-error` |     | Continue processing on errors                  |
+| `--force`           | `-F`  | Skip confirmation prompt                       |
+
+**Example:**
+
+```bash
+dtiam bulk remove-users-from-group --file users.csv --group "DevOps Team" --force
+```
+
+### bulk create-groups
+
+Create multiple groups from a file.
+
+```bash
+dtiam bulk create-groups [OPTIONS]
+```
+
+| Option              | Short | Description                          |
+| ------------------- | ----- | ------------------------------------ |
+| `--file`            | `-f`  | File with group definitions (YAML)   |
+| `--continue-on-error` |     | Continue processing on errors        |
+
+**File Format:**
+
+```yaml
+groups:
+  - name: "Group A"
+    description: "Description for Group A"
+  - name: "Group B"
+    description: "Description for Group B"
+```
+
+**Example:**
+
+```bash
+dtiam bulk create-groups --file groups.yaml
+dtiam bulk create-groups -f groups.yaml --dry-run
+```
+
+### bulk create-bindings
+
+Create multiple policy bindings from a file.
+
+```bash
+dtiam bulk create-bindings [OPTIONS]
+```
+
+| Option              | Short | Description                            |
+| ------------------- | ----- | -------------------------------------- |
+| `--file`            | `-f`  | File with binding definitions (YAML)   |
+| `--continue-on-error` |     | Continue processing on errors          |
+
+**File Format:**
+
+```yaml
+bindings:
+  - group: "group-uuid-or-name"
+    policy: "policy-uuid-or-name"
+    boundary: "optional-boundary-uuid"
+  - group: "another-group"
+    policy: "another-policy"
+```
+
+**Example:**
+
+```bash
+dtiam bulk create-bindings --file bindings.yaml
+dtiam bulk create-bindings -f bindings.yaml --dry-run
+```
+
+### bulk export-group-members
+
+Export group members to a file.
+
+```bash
+dtiam bulk export-group-members [OPTIONS]
+```
+
+| Option     | Short | Description                          |
+| ---------- | ----- | ------------------------------------ |
+| `--group`  | `-g`  | Group UUID or name (required)        |
+| `--output` | `-o`  | Output file path                     |
+| `--format` | `-F`  | Output format: csv, json, yaml (default: csv) |
+
+**Examples:**
+
+```bash
+dtiam bulk export-group-members --group "DevOps Team" --output members.csv
+dtiam bulk export-group-members -g DevOps -o members.json -F json
+```
+
+---
+
+## export
+
+Export IAM resources for backup or migration.
+
+### export all
+
+Export all IAM resources to files.
+
+```bash
+dtiam export all [OPTIONS]
+```
+
+| Option           | Short | Description                                    |
+| ---------------- | ----- | ---------------------------------------------- |
+| `--output`       | `-o`  | Output directory (default: ".")                |
+| `--format`       | `-f`  | Output format: csv, json, yaml (default: csv)  |
+| `--prefix`       | `-p`  | File name prefix (default: "dtiam")            |
+| `--include`      | `-i`  | Comma-separated list of exports to include     |
+| `--detailed`     | `-d`  | Include detailed/enriched data                 |
+| `--timestamp-dir`|       | Create timestamped subdirectory (default: true)|
+
+Available exports: environments, groups, users, policies, bindings, boundaries
+
+**Examples:**
+
+```bash
+dtiam export all                              # Export all to CSV in current dir
+dtiam export all -o ./backup -f json          # Export as JSON to backup dir
+dtiam export all --detailed                   # Include enriched data
+dtiam export all -i groups,policies           # Only export groups and policies
+```
+
+### export group
+
+Export a single group with its details.
+
+```bash
+dtiam export group IDENTIFIER [OPTIONS]
+```
+
+| Option             | Short | Description                      |
+| ------------------ | ----- | -------------------------------- |
+| `--output`         | `-o`  | Output file                      |
+| `--format`         | `-f`  | Output format: yaml, json (default: yaml) |
+| `--include-members`|       | Include member list (default: true) |
+| `--include-policies`|      | Include policy bindings (default: true) |
+
+**Examples:**
+
+```bash
+dtiam export group "DevOps Team"
+dtiam export group DevOps -o devops.yaml
+dtiam export group DevOps --include-members=false
+```
+
+### export policy
+
+Export a single policy with its details.
+
+```bash
+dtiam export policy IDENTIFIER [OPTIONS]
+```
+
+| Option         | Short | Description                              |
+| -------------- | ----- | ---------------------------------------- |
+| `--output`     | `-o`  | Output file                              |
+| `--format`     | `-f`  | Output format: yaml, json (default: yaml)|
+| `--as-template`| `-t`  | Export as reusable template              |
+
+**Examples:**
+
+```bash
+dtiam export policy "admin-policy"
+dtiam export policy viewer -o viewer.yaml
+dtiam export policy viewer --as-template -o viewer-template.yaml
+```
+
+---
+
+## analyze
+
+Analyze IAM permissions, effective permissions, and policy compliance.
+
+### analyze user-permissions
+
+Calculate effective permissions for a user based on group memberships and policy bindings.
+
+```bash
+dtiam analyze user-permissions USER [OPTIONS]
+```
+
+| Option     | Short | Description        |
+| ---------- | ----- | ------------------ |
+| `--export` | `-e`  | Export to file     |
+
+**Examples:**
+
+```bash
+dtiam analyze user-permissions admin@example.com
+dtiam analyze user-permissions admin@example.com -o json
+dtiam analyze user-permissions admin@example.com --export perms.yaml
+```
+
+### analyze group-permissions
+
+Calculate effective permissions for a group based on its policy bindings.
+
+```bash
+dtiam analyze group-permissions GROUP [OPTIONS]
+```
+
+| Option     | Short | Description        |
+| ---------- | ----- | ------------------ |
+| `--export` | `-e`  | Export to file     |
+
+**Examples:**
+
+```bash
+dtiam analyze group-permissions "DevOps Team"
+dtiam analyze group-permissions DevOps -o json
+```
+
+### analyze permissions-matrix
+
+Generate a permissions matrix showing which permissions are granted by each policy or group.
+
+```bash
+dtiam analyze permissions-matrix [OPTIONS]
+```
+
+| Option     | Short | Description                            |
+| ---------- | ----- | -------------------------------------- |
+| `--scope`  | `-s`  | Scope: policies or groups (default: policies) |
+| `--export` | `-e`  | Export to CSV file                     |
+
+**Examples:**
+
+```bash
+dtiam analyze permissions-matrix
+dtiam analyze permissions-matrix --scope groups
+dtiam analyze permissions-matrix --export matrix.csv
+```
+
+### analyze policy
+
+Analyze a policy's permissions and bindings.
+
+```bash
+dtiam analyze policy IDENTIFIER
+```
+
+Shows what permissions a policy grants and which groups it's bound to.
+
+**Examples:**
+
+```bash
+dtiam analyze policy "admin-policy"
+dtiam analyze policy viewer -o json
+```
+
+### analyze least-privilege
+
+Analyze policies for least-privilege compliance. Identifies policies that may grant excessive permissions.
+
+```bash
+dtiam analyze least-privilege [OPTIONS]
+```
+
+| Option     | Short | Description              |
+| ---------- | ----- | ------------------------ |
+| `--export` | `-e`  | Export findings to file  |
+
+Checks for:
+- Wildcard permissions (`*`)
+- Resource wildcards (`:*`)
+- Write/manage/delete/admin access
+- Permissions without conditions
+
+**Examples:**
+
+```bash
+dtiam analyze least-privilege
+dtiam analyze least-privilege -o json
+dtiam analyze least-privilege --export findings.yaml
+```
+
+### analyze effective-user
+
+Get effective permissions for a user via the Dynatrace Resolution API.
+
+```bash
+dtiam analyze effective-user USER [OPTIONS]
+```
+
+| Option       | Short | Description                                        |
+| ------------ | ----- | -------------------------------------------------- |
+| `--level`    | `-l`  | Level type: account, environment, global (default: account) |
+| `--level-id` |       | Level ID (uses account UUID if not specified)      |
+| `--services` | `-s`  | Comma-separated service filter                     |
+| `--export`   | `-e`  | Export to file                                     |
+
+**Examples:**
+
+```bash
+dtiam analyze effective-user admin@example.com
+dtiam analyze effective-user admin@example.com --level environment --level-id env123
+dtiam analyze effective-user admin@example.com --services settings,entities
+```
+
+### analyze effective-group
+
+Get effective permissions for a group via the Dynatrace Resolution API.
+
+```bash
+dtiam analyze effective-group GROUP [OPTIONS]
+```
+
+| Option       | Short | Description                                        |
+| ------------ | ----- | -------------------------------------------------- |
+| `--level`    | `-l`  | Level type: account, environment, global (default: account) |
+| `--level-id` |       | Level ID (uses account UUID if not specified)      |
+| `--services` | `-s`  | Comma-separated service filter                     |
+| `--export`   | `-e`  | Export to file                                     |
+
+**Examples:**
+
+```bash
+dtiam analyze effective-group "DevOps Team"
+dtiam analyze effective-group DevOps --level environment --level-id env123
 ```
 
 ---

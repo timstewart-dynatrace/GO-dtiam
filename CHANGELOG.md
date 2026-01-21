@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Comprehensive validation script (`scripts/validate.sh`) and `make validate` target
+- Unit tests for:
+  - `internal/utils/permissions_test.go` - Permission parsing and matrix tests
+  - `internal/output/format_test.go` - Output format tests
+  - `internal/config/config_test.go` - Configuration management tests
+  - `internal/client/client_test.go` - HTTP client and API error tests
+- Bulk operations commands:
+  - `bulk add-users-to-group` - Add multiple users from CSV/YAML/JSON file
+  - `bulk remove-users-from-group` - Remove multiple users from file
+  - `bulk create-groups` - Create multiple groups from file
+  - `bulk create-bindings` - Create multiple policy bindings from file
+  - `bulk export-group-members` - Export group members to file
+- Export commands:
+  - `export all` - Export all IAM resources to files
+  - `export group` - Export single group with members and policies
+  - `export policy` - Export single policy (optionally as template)
+- Analyze commands for permissions analysis:
+  - `analyze user-permissions` - Calculate effective permissions for a user
+  - `analyze group-permissions` - Calculate effective permissions for a group
+  - `analyze permissions-matrix` - Generate permissions matrix for policies/groups
+  - `analyze policy` - Analyze a policy's permissions and bindings
+  - `analyze least-privilege` - Identify policies with excessive permissions
+  - `analyze effective-user` - Get user permissions via Dynatrace API
+  - `analyze effective-group` - Get group permissions via Dynatrace API
+- Permissions utilities (`internal/utils/permissions.go`):
+  - `ParseStatementQuery()` - Parse policy statement queries
+  - `PermissionsCalculator` - Calculate effective permissions
+  - `PermissionsMatrix` - Generate permissions matrices
+  - `EffectivePermissionsAPI` - Call Dynatrace resolution API
+
+### Changed
+
+- Updated boundary query format to use modern Dynatrace syntax:
+  - Changed from `managementZone.name = "Zone"` to `environment:management-zone IN ("Zone")`
+  - Added `storage:dt.security_context` and `settings:dt.security_context` queries
+
 ## [1.0.0] - 2025-01-20
 
 ### Added
