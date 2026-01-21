@@ -102,8 +102,8 @@ func (h *LimitsHandler) GetSummary(ctx context.Context) (map[string]any, error) 
 	}
 
 	return map[string]any{
-		"limits":              limits,
-		"total_limits":        len(limits),
+		"limits":               limits,
+		"total_limits":         len(limits),
 		"limits_near_capacity": nearCapacity,
 		"limits_at_capacity":   atCapacity,
 	}, nil
@@ -118,10 +118,10 @@ func (h *LimitsHandler) CheckCapacity(ctx context.Context, limitName string, add
 	limit, err := h.Get(ctx, limitName)
 	if err != nil {
 		return map[string]any{
-			"limit_name":  limitName,
-			"found":       false,
+			"limit_name":   limitName,
+			"found":        false,
 			"has_capacity": false,
-			"message":     fmt.Sprintf("Limit %q not found", limitName),
+			"message":      fmt.Sprintf("Limit %q not found", limitName),
 		}, nil
 	}
 
@@ -140,14 +140,14 @@ func (h *LimitsHandler) CheckCapacity(ctx context.Context, limitName string, add
 	}
 
 	return map[string]any{
-		"limit_name":  limitName,
-		"found":       true,
+		"limit_name":   limitName,
+		"found":        true,
 		"has_capacity": hasCapacity,
-		"current":     current,
-		"max":         max,
-		"available":   available,
-		"requested":   additional,
-		"message":     message,
+		"current":      current,
+		"max":          max,
+		"available":    available,
+		"requested":    additional,
+		"message":      message,
 	}, nil
 }
 

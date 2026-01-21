@@ -49,9 +49,9 @@ type Preferences struct {
 // NewConfig creates a new Config with default values.
 func NewConfig() *Config {
 	return &Config{
-		APIVersion: "v1",
-		Kind:       "Config",
-		Contexts:   []NamedContext{},
+		APIVersion:  "v1",
+		Kind:        "Config",
+		Contexts:    []NamedContext{},
 		Credentials: []NamedCredential{},
 		Preferences: Preferences{
 			Output: "table",

@@ -99,13 +99,13 @@ func SaveToPath(config *Config, path string) error {
 
 // Environment variable names
 const (
-	EnvBearerToken   = "DTIAM_BEARER_TOKEN"
-	EnvClientID      = "DTIAM_CLIENT_ID"
-	EnvClientSecret  = "DTIAM_CLIENT_SECRET"
-	EnvAccountUUID   = "DTIAM_ACCOUNT_UUID"
-	EnvContext       = "DTIAM_CONTEXT"
-	EnvOutput        = "DTIAM_OUTPUT"
-	EnvVerbose       = "DTIAM_VERBOSE"
+	EnvBearerToken  = "DTIAM_BEARER_TOKEN"
+	EnvClientID     = "DTIAM_CLIENT_ID"
+	EnvClientSecret = "DTIAM_CLIENT_SECRET"
+	EnvAccountUUID  = "DTIAM_ACCOUNT_UUID"
+	EnvContext      = "DTIAM_CONTEXT"
+	EnvOutput       = "DTIAM_OUTPUT"
+	EnvVerbose      = "DTIAM_VERBOSE"
 )
 
 // applyEnvOverrides applies environment variable overrides to the config.

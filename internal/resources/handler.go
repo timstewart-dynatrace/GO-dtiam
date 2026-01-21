@@ -73,12 +73,12 @@ type CRUDHandler interface {
 
 // BaseHandler provides common functionality for resource handlers.
 type BaseHandler struct {
-	Client       *client.Client
-	Name         string
-	Path         string
-	ListKey      string
-	IDField      string
-	NameField    string
+	Client    *client.Client
+	Name      string
+	Path      string
+	ListKey   string
+	IDField   string
+	NameField string
 }
 
 // ResourceName returns the resource name.
@@ -258,7 +258,10 @@ func (h *BaseHandler) handleError(operation string, err error) error {
 }
 
 // GetOrResolve gets a resource by ID or name.
-func GetOrResolve(ctx context.Context, h interface{ Getter; NameGetter }, identifier string) (map[string]any, error) {
+func GetOrResolve(ctx context.Context, h interface {
+	Getter
+	NameGetter
+}, identifier string) (map[string]any, error) {
 	// Try as ID first
 	result, err := h.Get(ctx, identifier)
 	if err == nil {
@@ -272,4 +275,21 @@ func GetOrResolve(ctx context.Context, h interface{ Getter; NameGetter }, identi
 
 	// Return original error
 	return nil, err
+}
+
+// Resolve resolves an identifier to a resource (by ID or name).
+func (h *BaseHandler) Resolve(ctx context.Context, identifier string) (map[string]any, error) {
+	// Try as ID first
+	result, err := h.Get(ctx, identifier)
+	if err == nil && result != nil {
+		return result, nil
+	}
+
+	// Try as name
+	result, err = h.GetByName(ctx, identifier)
+	if err == nil && result != nil {
+		return result, nil
+	}
+
+	return nil, fmt.Errorf("%s not found: %s", h.Name, identifier)
 }

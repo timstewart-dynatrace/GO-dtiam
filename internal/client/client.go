@@ -344,3 +344,8 @@ func (c *Client) PutJSON(ctx context.Context, path string, reqBody any, v any) e
 	}
 	return nil
 }
+
+// ParseJSON is a helper function to unmarshal JSON into the provided value.
+func ParseJSON(data []byte, v any) error {
+	return json.Unmarshal(data, v)
+}

@@ -119,20 +119,21 @@ func (h *BoundaryHandler) GetAttachedPolicies(ctx context.Context, boundaryID st
 }
 
 // buildZoneQuery builds a boundary query from management zone names.
+// Uses the modern Dynatrace boundary query format with security context.
 func (h *BoundaryHandler) buildZoneQuery(managementZones []string) string {
-	var conditions []string
+	// Quote each zone name and join with commas
+	var quotedZones []string
 	for _, zone := range managementZones {
-		conditions = append(conditions, fmt.Sprintf(`managementZone.name = "%s"`, zone))
+		quotedZones = append(quotedZones, fmt.Sprintf(`"%s"`, zone))
+	}
+	zoneList := strings.Join(quotedZones, ", ")
+
+	// Build query using the IN operator for each resource type
+	queryParts := []string{
+		fmt.Sprintf("environment:management-zone IN (%s);", zoneList),
+		fmt.Sprintf("storage:dt.security_context IN (%s);", zoneList),
+		fmt.Sprintf("settings:dt.security_context IN (%s);", zoneList),
 	}
 
-	whereClause := strings.Join(conditions, " OR ")
-
-	// Build query for each resource type
-	resourceTypes := []string{"environment", "storage", "settings"}
-	var queries []string
-	for _, rt := range resourceTypes {
-		queries = append(queries, fmt.Sprintf("ALLOW %s:* WHERE %s", rt, whereClause))
-	}
-
-	return strings.Join(queries, ";")
+	return strings.Join(queryParts, "\n")
 }

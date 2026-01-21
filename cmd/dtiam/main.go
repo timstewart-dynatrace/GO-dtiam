@@ -4,12 +4,15 @@ package main
 import (
 	"github.com/jtimothystewart/dtiam/internal/cli"
 	"github.com/jtimothystewart/dtiam/internal/commands/account"
+	"github.com/jtimothystewart/dtiam/internal/commands/analyze"
 	"github.com/jtimothystewart/dtiam/internal/commands/boundary"
+	"github.com/jtimothystewart/dtiam/internal/commands/bulk"
 	"github.com/jtimothystewart/dtiam/internal/commands/cache"
 	configcmd "github.com/jtimothystewart/dtiam/internal/commands/config"
 	"github.com/jtimothystewart/dtiam/internal/commands/create"
 	deletecmd "github.com/jtimothystewart/dtiam/internal/commands/delete"
 	"github.com/jtimothystewart/dtiam/internal/commands/describe"
+	"github.com/jtimothystewart/dtiam/internal/commands/export"
 	"github.com/jtimothystewart/dtiam/internal/commands/get"
 	"github.com/jtimothystewart/dtiam/internal/commands/group"
 	"github.com/jtimothystewart/dtiam/internal/commands/serviceuser"
@@ -29,6 +32,9 @@ func main() {
 	cli.AddCommand(boundary.Cmd)
 	cli.AddCommand(account.Cmd)
 	cli.AddCommand(cache.Cmd)
+	cli.AddCommand(bulk.Cmd)
+	cli.AddCommand(export.Cmd)
+	cli.AddCommand(analyze.Cmd)
 
 	// Execute
 	cli.Execute()

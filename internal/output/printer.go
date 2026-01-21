@@ -242,3 +242,15 @@ func (p *Printer) PrintDetail(data map[string]any) error {
 
 	return nil
 }
+
+// PrintAny prints any data structure as JSON or YAML based on format.
+func (p *Printer) PrintAny(data any) error {
+	switch p.format {
+	case FormatJSON, FormatPlain, FormatTable, FormatWide, FormatCSV:
+		return p.printJSON(data)
+	case FormatYAML:
+		return p.printYAML(data)
+	default:
+		return p.printJSON(data)
+	}
+}

@@ -1,4 +1,4 @@
-.PHONY: all build test lint clean install fmt vet
+.PHONY: all build test lint clean install fmt vet validate
 
 # Variables
 BINARY_NAME := dtiam
@@ -73,6 +73,10 @@ mocks:
 	@which mockery > /dev/null || (echo "Installing mockery..." && go install github.com/vektra/mockery/v2@latest)
 	mockery --all --output ./internal/mocks
 
+# Run comprehensive validation
+validate: build
+	./scripts/validate.sh
+
 # Show help
 help:
 	@echo "Available targets:"
@@ -84,6 +88,7 @@ help:
 	@echo "  lint         - Run linter"
 	@echo "  fmt          - Format code"
 	@echo "  vet          - Run go vet"
+	@echo "  validate     - Run comprehensive validation script"
 	@echo "  clean        - Clean build artifacts"
 	@echo "  install      - Install the binary"
 	@echo "  deps         - Download dependencies"

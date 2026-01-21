@@ -34,6 +34,11 @@ func (s *State) GetOutput() output.Format {
 	return s.Output
 }
 
+// GetOutputFormat returns the output format (alias for GetOutput).
+func (s *State) GetOutputFormat() output.Format {
+	return s.Output
+}
+
 // IsVerbose returns true if verbose mode is enabled.
 func (s *State) IsVerbose() bool {
 	return s.Verbose
