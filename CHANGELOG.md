@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-04-06
+
+### Added
+
+- Centralized `internal/prompt` package for confirmation prompts (`Confirm`, `ConfirmDelete`)
+- Safe type assertion helpers in `internal/utils/safemap.go` (`StringFrom`, `IntFrom`, `BoolFrom`, `SliceFrom`, `MapFrom`, `StringSliceFrom`)
+- API URL constants centralized in `internal/client/urls.go`
+- `Example` help text on all ~50 CLI subcommands with real-world usage patterns
+- Mandatory command standards documentation (`.claude/rules/command-standards.md`)
+- Phase planning docs for v2.0.0 refactor (`.claude/phases/`)
+- Tests for safemap utilities and URL constants
+
+### Changed
+
+- `--plain` mode now forces JSON output when table/wide format is selected (AI/machine consumption)
+- All destructive operations use centralized `prompt.ConfirmDelete()` instead of inline implementations
+- All dry-run messages use `printer.PrintWarning()` instead of raw `fmt.Printf`
+- Bulk `--force` flag standardized to lowercase `-f` (was `-F`)
+- Consolidated duplicate `tokenProviderAdapter` from 3 copies to 1 in `common/client.go`
+- Consolidated duplicate `createClient()` from get/describe packages to `common.CreateClient()`
+- Replaced ~40 unsafe bare `.(string)` type assertions with safe `StringFrom()` helpers
+- Extracted hardcoded API URLs from 6 resource handlers to centralized constants
+
+### Fixed
+
+- Potential panics from unguarded type assertions on API response maps
+- Bulk remove-users-from-group using `fmt.Scanln` instead of proper confirmation prompt
+
 ## [1.1.1] - 2025-01-21
 
 ### Fixed
@@ -107,7 +135,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - docs/ARCHITECTURE.md - Technical design documentation
 - docs/API_REFERENCE.md - Programmatic usage guide
 
-[Unreleased]: https://github.com/jtimothystewart/GO-IAM-CLI/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/jtimothystewart/GO-IAM-CLI/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/jtimothystewart/GO-IAM-CLI/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/jtimothystewart/GO-IAM-CLI/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/jtimothystewart/GO-IAM-CLI/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/jtimothystewart/GO-IAM-CLI/releases/tag/v1.0.0
