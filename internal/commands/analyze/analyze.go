@@ -286,9 +286,7 @@ Useful for security audits and compliance reviews.`,
 				// Get fields from first row
 				var fields []string
 				fields = append(fields, nameField)
-				for _, perm := range result.Permissions {
-					fields = append(fields, perm)
-				}
+				fields = append(fields, result.Permissions...)
 
 				if err := writer.Write(fields); err != nil {
 					return err

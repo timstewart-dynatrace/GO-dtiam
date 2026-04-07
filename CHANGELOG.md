@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-04-07
+
+### Fixed
+
+- Remove unused `detailColumns()` function and stale import in `describe` package
+- Simplify loop to `append(fields, result.Permissions...)` in `analyze` package
+- Remove unused `columns` variable and dead loop in `boundary` package
+- Check all `SetContext()`/`UseContext()` error returns in config tests
+
 ## [1.2.0] - 2026-04-06
 
 ### Added

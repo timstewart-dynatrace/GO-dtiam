@@ -9,7 +9,6 @@ import (
 
 	"github.com/jtimothystewart/dtiam/internal/cli"
 	"github.com/jtimothystewart/dtiam/internal/commands/common"
-	"github.com/jtimothystewart/dtiam/internal/output"
 	"github.com/jtimothystewart/dtiam/internal/resources"
 	"github.com/jtimothystewart/dtiam/internal/utils"
 )
@@ -315,7 +314,3 @@ service user UID or name.`,
 	},
 }
 
-// Helper columns for describe output
-func detailColumns() []output.Column {
-	return []output.Column{} // Detail view doesn't use columns
-}

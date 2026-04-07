@@ -193,24 +193,6 @@ resolved to the corresponding UUID automatically.`,
 			return nil
 		}
 
-		// Define columns for attached policies
-		columns := []struct {
-			Key    string
-			Header string
-		}{
-			{"policyUuid", "POLICY_UUID"},
-			{"groupUuid", "GROUP_UUID"},
-		}
-
-		// Convert to output.Column format
-		var cols []struct {
-			Key    string
-			Header string
-		}
-		for _, c := range columns {
-			cols = append(cols, c)
-		}
-
 		return printer.Print(attached, nil)
 	},
 }

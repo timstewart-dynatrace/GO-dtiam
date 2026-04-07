@@ -28,7 +28,9 @@ func TestConfig_GetContext(t *testing.T) {
 	cfg := NewConfig()
 	accountUUID := "test-uuid"
 	credRef := "test-cred"
-	cfg.SetContext("test", &accountUUID, &credRef)
+	if err := cfg.SetContext("test", &accountUUID, &credRef); err != nil {
+		t.Fatalf("SetContext() unexpected error: %v", err)
+	}
 
 	// Test found
 	ctx := cfg.GetContext("test")
@@ -60,8 +62,12 @@ func TestConfig_GetCurrentContext(t *testing.T) {
 
 	// Add and set context
 	accountUUID := "test-uuid"
-	cfg.SetContext("test", &accountUUID, nil)
-	cfg.UseContext("test")
+	if err := cfg.SetContext("test", &accountUUID, nil); err != nil {
+		t.Fatalf("SetContext() unexpected error: %v", err)
+	}
+	if err := cfg.UseContext("test"); err != nil {
+		t.Fatalf("UseContext() unexpected error: %v", err)
+	}
 
 	ctx = cfg.GetCurrentContext()
 	if ctx == nil {
@@ -100,8 +106,12 @@ func TestConfig_SetCredential(t *testing.T) {
 func TestConfig_DeleteContext(t *testing.T) {
 	cfg := NewConfig()
 	accountUUID := "test-uuid"
-	cfg.SetContext("test", &accountUUID, nil)
-	cfg.UseContext("test")
+	if err := cfg.SetContext("test", &accountUUID, nil); err != nil {
+		t.Fatalf("SetContext() unexpected error: %v", err)
+	}
+	if err := cfg.UseContext("test"); err != nil {
+		t.Fatalf("UseContext() unexpected error: %v", err)
+	}
 
 	// Delete existing
 	if !cfg.DeleteContext("test") {
@@ -149,7 +159,9 @@ func TestConfig_UseContext(t *testing.T) {
 
 	// Add and use context
 	accountUUID := "test-uuid"
-	cfg.SetContext("test", &accountUUID, nil)
+	if err := cfg.SetContext("test", &accountUUID, nil); err != nil {
+		t.Fatalf("SetContext() unexpected error: %v", err)
+	}
 	err = cfg.UseContext("test")
 	if err != nil {
 		t.Errorf("UseContext() unexpected error: %v", err)
@@ -171,8 +183,12 @@ func TestConfig_GetContextNames(t *testing.T) {
 	// Add contexts
 	uuid1 := "uuid1"
 	uuid2 := "uuid2"
-	cfg.SetContext("ctx1", &uuid1, nil)
-	cfg.SetContext("ctx2", &uuid2, nil)
+	if err := cfg.SetContext("ctx1", &uuid1, nil); err != nil {
+		t.Fatalf("SetContext() unexpected error: %v", err)
+	}
+	if err := cfg.SetContext("ctx2", &uuid2, nil); err != nil {
+		t.Fatalf("SetContext() unexpected error: %v", err)
+	}
 
 	names = cfg.GetContextNames()
 	if len(names) != 2 {
@@ -232,8 +248,12 @@ func TestConfig_Validate(t *testing.T) {
 	uuid := "test-uuid"
 	credRef := "test-cred"
 	cfg.SetCredential("test-cred", "id", "secret")
-	cfg.SetContext("test", &uuid, &credRef)
-	cfg.UseContext("test")
+	if err := cfg.SetContext("test", &uuid, &credRef); err != nil {
+		t.Fatalf("SetContext() unexpected error: %v", err)
+	}
+	if err := cfg.UseContext("test"); err != nil {
+		t.Fatalf("UseContext() unexpected error: %v", err)
+	}
 
 	if err := cfg.Validate(); err != nil {
 		t.Errorf("Validate() unexpected error for valid config: %v", err)
@@ -250,7 +270,9 @@ func TestConfig_Validate(t *testing.T) {
 	cfg3 := NewConfig()
 	uuid3 := "uuid"
 	badCredRef := "nonexistent"
-	cfg3.SetContext("test", &uuid3, &badCredRef)
+	if err := cfg3.SetContext("test", &uuid3, &badCredRef); err != nil {
+		t.Fatalf("SetContext() unexpected error: %v", err)
+	}
 	if err := cfg3.Validate(); err == nil {
 		t.Error("Validate() should return error for nonexistent credential ref")
 	}
