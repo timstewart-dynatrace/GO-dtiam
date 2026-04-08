@@ -9,7 +9,7 @@ import (
 func TestUserCmd_HasSubcommands(t *testing.T) {
 	expected := []string{
 		"add-to-groups", "remove-from-groups", "replace-groups",
-		"list-groups", "create",
+		"list-groups", "create", "info",
 	}
 
 	subcmds := Cmd.Commands()
@@ -158,6 +158,24 @@ func TestCreateCmd_GroupsFlagShorthand(t *testing.T) {
 	}
 	if f.Shorthand != "g" {
 		t.Errorf("--groups should have shorthand -g, got -%s", f.Shorthand)
+	}
+}
+
+func TestInfoCmd_Args(t *testing.T) {
+	var buf bytes.Buffer
+	Cmd.SetOut(&buf)
+	Cmd.SetErr(&buf)
+	Cmd.SetArgs([]string{"info"})
+
+	err := Cmd.Execute()
+	if err == nil {
+		t.Error("expected error when no args provided to info")
+	}
+}
+
+func TestInfoCmd_HasExample(t *testing.T) {
+	if infoCmd.Example == "" {
+		t.Error("info command should have example text")
 	}
 }
 

@@ -11,7 +11,7 @@ This document consolidates all implementation phases for bringing dtiam to full 
 | 1 | Foundation | **Done** | Safe type assertions, URL constants, client consolidation |
 | 1.5 | Command Standards | **Done** | Centralized prompts, --plain JSON override, Example help text |
 | 2 | Architecture Alignment | **Done** | Resty client, Viper config, Logrus logging, struct-tag output |
-| 3 | Quick Wins | Pending | Account capabilities command, per-resource exports, user info alias |
+| 3 | Quick Wins | **Done** | Account capabilities command, per-resource exports, user info alias |
 | 4 | Advanced Operations | Pending | Group clone, app/schema boundaries, group setup, parameterized policies |
 | 5 | Templates & Apply | Pending | Template engine, template commands, declarative apply, bulk groups+policies |
 | 6 | Analysis & Caching | Pending | Permission diff/gaps, enhanced least-privilege, functional cache |
@@ -131,24 +131,24 @@ Resty HTTP client with retry/backoff, Viper config with env binding, Logrus stru
 
 ## Current Implementation Summary
 
-**Fully implemented (58+ subcommands, 13 resource handlers, 737 tests):**
+**Fully implemented (65+ subcommands, 13 resource handlers, 750+ tests):**
 - All core CRUD: groups, users, service users, policies, bindings, boundaries
 - Resource types: environments, limits, subscriptions, platform tokens, apps, schemas
 - Bulk ops: add/remove users, create groups, create bindings, export group members
-- Export: all resources, single group, single policy (with --as-template)
+- Export: all resources, single group, single policy (with --as-template), per-resource exports (environments, users, bindings, boundaries, service-users)
 - Analyze: user/group permissions, permissions matrix, policy analysis, least-privilege, effective permissions via API
-- Account: limits, subscriptions, capacity check, forecast
+- Account: limits, subscriptions, capacity check, forecast, capabilities
+- User: add/remove/replace groups, list groups, create, info
 - Config: multi-context, multi-credential, XDG paths
 - Output: table, wide, JSON, YAML, CSV with --plain machine mode
 
 **Stub/placeholder:**
 - Cache commands (no-op, documented as non-persistent)
 
-**Not yet implemented (~8% of Python CLI parity):**
+**Not yet implemented (~6% of Python CLI parity):**
 - Templates & apply (Phase 5)
 - Zones (Phase 7)
 - Group clone/setup (Phase 4)
 - App/schema boundary helpers (Phase 4)
 - Parameterized policies (Phase 4)
 - Permission diff/gaps (Phase 6)
-- Account capabilities command (Phase 3 — handler exists)

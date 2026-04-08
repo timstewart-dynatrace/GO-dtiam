@@ -605,6 +605,25 @@ dtiam user create user@example.com --first-name John --last-name Doe
 dtiam user create user@example.com --groups "DevOps,Platform"
 ```
 
+### user info
+
+Show detailed information about a user. Equivalent to `describe user`.
+
+```bash
+dtiam user info IDENTIFIER
+```
+
+| Argument      | Description                      |
+| ------------- | -------------------------------- |
+| `IDENTIFIER`  | User UID or email address        |
+
+**Examples:**
+
+```bash
+dtiam user info alice@example.com
+dtiam user info alice@example.com -o json
+```
+
 ### user add-to-groups
 
 Add a user to multiple groups.
@@ -937,6 +956,23 @@ Get usage forecast for subscriptions.
 dtiam account forecast [--output FORMAT]
 ```
 
+### account capabilities
+
+List capability flags from subscriptions.
+
+```bash
+dtiam account capabilities [SUBSCRIPTION] [--output FORMAT]
+```
+
+When called without arguments, lists capabilities from all subscriptions.
+When given a subscription UUID or name, lists capabilities for that subscription only.
+
+```bash
+dtiam account capabilities
+dtiam account capabilities "Enterprise Plan"
+dtiam account capabilities -o json
+```
+
 ---
 
 ## cache
@@ -1182,6 +1218,57 @@ dtiam export policy IDENTIFIER [OPTIONS]
 dtiam export policy "admin-policy"
 dtiam export policy viewer -o viewer.yaml
 dtiam export policy viewer --as-template -o viewer-template.yaml
+```
+
+### export environments
+
+Export all environments to a file.
+
+```bash
+dtiam export environments [OPTIONS]
+```
+
+| Option       | Short | Description                                |
+| ------------ | ----- | ------------------------------------------ |
+| `--output`   | `-o`  | Output directory (default: `.`)            |
+| `--format`   | `-f`  | Output format: csv, json, yaml (default: csv) |
+| `--prefix`   | `-p`  | File name prefix (default: `dtiam`)        |
+| `--detailed`  | `-d`  | Include detailed/enriched data             |
+
+### export users
+
+Export all users to a file. With `--detailed`, includes group membership counts.
+
+```bash
+dtiam export users [OPTIONS]
+dtiam export users --detailed -f json
+```
+
+### export bindings
+
+Export all policy bindings to a file. With `--detailed`, enriches with group/policy names.
+
+```bash
+dtiam export bindings [OPTIONS]
+dtiam export bindings --detailed -f json
+```
+
+### export boundaries
+
+Export all boundaries to a file. With `--detailed`, includes attached policy counts.
+
+```bash
+dtiam export boundaries [OPTIONS]
+dtiam export boundaries --detailed -f json
+```
+
+### export service-users
+
+Export all service users to a file.
+
+```bash
+dtiam export service-users [OPTIONS]
+dtiam export service-users -f yaml -o ./backup
 ```
 
 ---

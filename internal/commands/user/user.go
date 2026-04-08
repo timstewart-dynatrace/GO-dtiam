@@ -40,6 +40,7 @@ func init() {
 	Cmd.AddCommand(replaceGroupsCmd)
 	Cmd.AddCommand(listGroupsCmd)
 	Cmd.AddCommand(createCmd)
+	Cmd.AddCommand(infoCmd)
 }
 
 var addToGroupsCmd = &cobra.Command{
@@ -312,6 +313,62 @@ fails, the command automatically falls back to searching by email.`,
 		}
 
 		return printer.Print(groups, output.GroupColumns())
+	},
+}
+
+var infoCmd = &cobra.Command{
+	Use:   "info IDENTIFIER",
+	Short: "Show detailed user information",
+	Long: `Display detailed information about a specific IAM user.
+
+Shows all user fields including UID, email, name, status, group memberships,
+and associated permissions. The IDENTIFIER can be a user UID or email address.
+
+This is equivalent to 'dtiam describe user'.`,
+	Example: `  # Show user info by email
+  dtiam user info alice@example.com
+
+  # Show user info by UID
+  dtiam user info 8f2e4a6b-1c3d-5e7f-9a0b-2c4d6e8f0a1b
+
+  # Output as JSON
+  dtiam user info alice@example.com -o json
+
+  # Machine-friendly output
+  dtiam user info alice@example.com --plain`,
+	Args: cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := common.CreateClient()
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+
+		handler := resources.NewUserHandler(c)
+		printer := cli.GlobalState.NewPrinter()
+		ctx := context.Background()
+
+		user, err := handler.Get(ctx, args[0])
+		if err != nil {
+			user, err = handler.GetByEmail(ctx, args[0])
+			if err != nil {
+				return err
+			}
+		}
+		if user == nil {
+			return fmt.Errorf("user %q not found", args[0])
+		}
+
+		// Get expanded information
+		uid, _ := user["uid"].(string)
+		if uid != "" {
+			expanded, err := handler.GetExpanded(ctx, uid)
+			if err == nil {
+				user = expanded
+			}
+		}
+
+		return printer.PrintDetail(user)
 	},
 }
 

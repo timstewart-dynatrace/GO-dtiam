@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-04-08
+
+### Added
+
+- **Account capabilities** — `account capabilities [SUBSCRIPTION]` command to list capability flags from subscriptions
+- **Per-resource exports** — `export environments`, `export users`, `export bindings`, `export boundaries`, `export service-users` subcommands with `--detailed` enrichment
+- **User info** — `user info IDENTIFIER` command as alias for `describe user` (Python CLI parity)
+
 ## [1.3.0] - 2026-04-08
 
 ### Added

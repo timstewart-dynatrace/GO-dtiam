@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestExportCmd_HasSubcommands(t *testing.T) {
-	expected := []string{"all", "group", "policy"}
+	expected := []string{"all", "group", "policy", "environments", "users", "bindings", "boundaries", "service-users"}
 
 	subcmds := Cmd.Commands()
 	names := make(map[string]bool)
@@ -106,6 +108,59 @@ func TestExportPolicyCmd_Args(t *testing.T) {
 	err := Cmd.Execute()
 	if err == nil {
 		t.Error("export policy should require exactly 1 argument")
+	}
+}
+
+func TestExportResourceCmds_Flags(t *testing.T) {
+	cmds := map[string]*cobra.Command{
+		"environments":  environmentsCmd,
+		"users":         usersCmd,
+		"bindings":      bindingsCmd,
+		"boundaries":    boundariesCmd,
+		"service-users": serviceUsersCmd,
+	}
+
+	expectedFlags := []string{"output", "format", "prefix", "detailed"}
+
+	for name, cmd := range cmds {
+		for _, flag := range expectedFlags {
+			f := cmd.Flags().Lookup(flag)
+			if f == nil {
+				t.Errorf("export %s command should have --%s flag", name, flag)
+			}
+		}
+	}
+}
+
+func TestExportResourceCmds_HaveExamples(t *testing.T) {
+	cmds := map[string]*cobra.Command{
+		"environments":  environmentsCmd,
+		"users":         usersCmd,
+		"bindings":      bindingsCmd,
+		"boundaries":    boundariesCmd,
+		"service-users": serviceUsersCmd,
+	}
+
+	for name, cmd := range cmds {
+		if cmd.Example == "" {
+			t.Errorf("export %s command should have example text", name)
+		}
+	}
+}
+
+func TestExportResourceCmds_HaveAliases(t *testing.T) {
+	cmds := map[string]*cobra.Command{
+		"environments":  environmentsCmd,
+		"users":         usersCmd,
+		"bindings":      bindingsCmd,
+		"boundaries":    boundariesCmd,
+		"service-users": serviceUsersCmd,
+	}
+
+	for name, cmd := range cmds {
+		if len(cmd.Aliases) == 0 {
+			t.Errorf("export %s command should have aliases", name)
+		}
 	}
 }
 

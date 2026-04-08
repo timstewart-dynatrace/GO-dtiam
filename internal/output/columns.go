@@ -144,6 +144,15 @@ func SchemaColumns() []Column {
 	}
 }
 
+// CapabilityColumns returns columns for subscription capability resources.
+func CapabilityColumns() []Column {
+	return []Column{
+		{Key: "key", Header: "KEY"},
+		{Key: "enabled", Header: "ENABLED"},
+		{Key: "subscription", Header: "SUBSCRIPTION", WideOnly: true},
+	}
+}
+
 // ContextColumns returns columns for context configuration.
 func ContextColumns() []Column {
 	return []Column{
