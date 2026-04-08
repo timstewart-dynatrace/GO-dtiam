@@ -20,7 +20,7 @@ dtiam/
 │   │   ├── serviceuser/              # OAuth client management
 │   │   ├── group/                    # Advanced group ops
 │   │   ├── boundary/                 # Boundary attach/detach
-│   │   ├── account/                  # Limits and subscriptions
+│   │   ├── account/                  # Limits, subscriptions, capabilities
 │   │   ├── cache/                    # Cache management
 │   │   ├── bulk/                     # Bulk operations from files
 │   │   ├── export/                   # Export resources for backup
@@ -186,7 +186,12 @@ Level types: `account`, `environment`, `global`
 |---------|-------------|
 | `export all` | Export all resources |
 | `export group` | Export single group |
-| `export policy` | Export single policy |
+| `export policy` | Export single policy (with --as-template) |
+| `export environments` | Export all environments |
+| `export users` | Export all users (with --detailed enrichment) |
+| `export bindings` | Export all bindings (with --detailed enrichment) |
+| `export boundaries` | Export all boundaries (with --detailed enrichment) |
+| `export service-users` | Export all service users |
 
 ### Analyze Operations
 
