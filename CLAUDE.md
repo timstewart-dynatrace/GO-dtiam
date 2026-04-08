@@ -166,7 +166,7 @@ git push
 
 **ALL merges to main that add features or fixes MUST increment the version number.**
 
-Current version: **1.0.0** (defined in `pkg/version/version.go` and set via ldflags)
+Current version: **1.2.1** (defined in `pkg/version/version.go` and set via ldflags)
 
 #### Semantic Versioning (SemVer)
 
@@ -316,7 +316,7 @@ gh release create v1.1.0 \
 
 **dtiam** is a kubectl-inspired CLI for managing Dynatrace Identity and Access Management (IAM) resources. It provides a consistent interface for managing groups, users, policies, bindings, boundaries, environments, and service users.
 
-**Language:** Go 1.22+
+**Language:** Go 1.23+
 
 ## Quick Reference
 
@@ -384,6 +384,7 @@ dtiam/
 │   │   └── bearer.go                 # Static bearer token
 │   ├── resources/
 │   │   ├── handler.go                # Handler interfaces
+│   │   ├── types.go                  # Typed response structs with table tags
 │   │   ├── groups.go                 # GroupHandler
 │   │   ├── users.go                  # UserHandler
 │   │   ├── policies.go               # PolicyHandler
@@ -392,14 +393,24 @@ dtiam/
 │   │   ├── environments.go           # EnvironmentHandler
 │   │   ├── serviceusers.go           # ServiceUserHandler
 │   │   ├── limits.go                 # LimitsHandler
-│   │   └── subscriptions.go          # SubscriptionHandler
+│   │   ├── subscriptions.go          # SubscriptionHandler
+│   │   ├── tokens.go                 # TokenHandler (platform tokens)
+│   │   ├── apps.go                   # AppHandler (App Engine Registry)
+│   │   └── schemas.go                # SchemaHandler (Settings API)
 │   ├── output/
 │   │   ├── format.go                 # Format enum
 │   │   ├── printer.go                # Unified Printer
+│   │   ├── structprinter.go          # Struct-tag based printer
 │   │   ├── table.go                  # Table formatter
 │   │   └── columns.go                # Column definitions
 │   ├── prompt/
 │   │   └── confirm.go                # Confirmation prompts (Confirm, ConfirmDelete)
+│   ├── diagnostic/
+│   │   └── error.go                  # Enhanced errors with exit codes and suggestions
+│   ├── logging/
+│   │   └── logger.go                 # Structured logging with logrus
+│   ├── suggest/
+│   │   └── suggest.go                # Levenshtein command/flag suggestions
 │   └── utils/
 │       ├── permissions.go            # Permissions calculator, matrix, effective API
 │       └── safemap.go                # Safe type assertion helpers
@@ -432,7 +443,12 @@ dtiam supports two authentication methods:
 | `DTIAM_CLIENT_SECRET` | OAuth2 client secret (format: dt0s01.CLIENTID.SECRET) |
 | `DTIAM_ACCOUNT_UUID` | Dynatrace account UUID |
 | `DTIAM_CONTEXT` | Override current context |
-| `DTIAM_ENVIRONMENT_URL` | Environment URL for App Engine Registry (e.g., abc12345.apps.dynatrace.com) |
+| `DTIAM_OUTPUT` | Output format (table, json, yaml, csv) |
+| `DTIAM_VERBOSE` | Enable verbose output |
+| `DTIAM_ENVIRONMENT_URL` | Environment URL for apps/schemas (e.g., abc12345.apps.dynatrace.com) |
+| `DTIAM_ENVIRONMENT_TOKEN` | Separate environment API token |
+| `DTIAM_API_URL` | Custom IAM API base URL |
+| `DTIAM_SCOPES` | Custom OAuth scopes (comma-separated) |
 
 **Note:** `DTIAM_CLIENT_ID` is optional. If not set, it will be automatically extracted from
 `DTIAM_CLIENT_SECRET` since Dynatrace secrets follow the format `dt0s01.CLIENTID.SECRETPART`.
@@ -827,9 +843,13 @@ Check `~/.config/dtiam/config` for credential configuration.
 ## Dependencies
 
 ```
-github.com/spf13/cobra      # CLI framework
-github.com/olekukonko/tablewriter  # Table output
-gopkg.in/yaml.v3            # YAML parsing
+github.com/spf13/cobra           # CLI framework
+github.com/olekukonko/tablewriter # Table output
+gopkg.in/yaml.v3                 # YAML parsing
+github.com/go-resty/resty/v2     # HTTP client with retry
+github.com/sirupsen/logrus       # Structured logging
+github.com/spf13/viper           # Configuration management with env binding
+github.com/adrg/xdg              # XDG base directory support
 ```
 
 Note: OAuth2 is implemented using the standard library (`net/http`, `net/url`) without external dependencies.

@@ -11,7 +11,7 @@ This document consolidates all implementation phases for bringing dtiam to full 
 | 1 | Foundation | **Done** | Safe type assertions, URL constants, client consolidation |
 | 1.5 | Command Standards | **Done** | Centralized prompts, --plain JSON override, Example help text |
 | 2 | Architecture Alignment | **Done** | Resty client, Viper config, Logrus logging, struct-tag output |
-| 3 | New Resource Types | Pending | Platform tokens, apps, schemas, zones, account capabilities |
+| 3 | New Resource Types | **In Progress** | Platform tokens, apps, schemas (done); zones, account capabilities (pending) |
 | 4 | Advanced Operations | Pending | Group clone/setup, parameterized policies, app/schema boundaries |
 | 5 | Templates & Apply | Pending | Template engine, declarative apply, bulk create-groups-with-policies |
 | 6 | Caching & Analysis | Pending | TTL cache, permission gaps, permission diff, risk scoring |
@@ -140,10 +140,10 @@ This document consolidates all implementation phases for bringing dtiam to full 
 
 ## Feature Gap Summary (vs Python-IAM-CLI v3.13.0)
 
-**Already implemented (~85%)**:
-All core CRUD, user/group/service-user management, bulk ops, export, analyze, account limits/subscriptions/forecast/check-capacity, boundary attach/detach, multi-context auth.
+**Already implemented (~92%)**:
+All core CRUD, user/group/service-user management, bulk ops, export, analyze, account limits/subscriptions/forecast/check-capacity, boundary attach/detach, multi-context auth, Resty HTTP client, Viper config with env binding, XDG paths, structured logging, diagnostic errors with exit codes, Levenshtein suggestions, struct-tag output, platform tokens, apps (App Engine Registry), schemas (Settings API), config credential enhancements (api-url, scopes, env-url/token).
 
-**Remaining (~15%)**:
-Templates, platform tokens, apps, schemas, zones, group clone/setup, parameterized policies, app/schema boundaries, caching, permission gaps/diff, user info/bulk-groups, per-resource exports, config enhancements (api-url, scopes, env-url/token).
+**Remaining (~8%)**:
+Templates, zones, group clone/setup, parameterized policies, app/schema boundaries, caching, permission gaps/diff, user info/bulk-groups, per-resource exports, account capabilities.
 
-All gaps are tracked in `.claude/phases/PHASE-02 through PHASE-08`.
+All gaps are tracked in `.claude/phases/PHASE-03 through PHASE-08`.

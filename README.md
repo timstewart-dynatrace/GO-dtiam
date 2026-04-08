@@ -74,6 +74,9 @@ Multi-context configuration and scope requirements are covered in the **[Quick S
 | Environments | get, describe |
 | Limits | get, check-capacity, summary |
 | Subscriptions | get, forecast |
+| Platform Tokens | get, create, delete |
+| Apps | get (requires --environment) |
+| Schemas | get, search (requires --environment) |
 
 ### Bulk & Analysis
 
