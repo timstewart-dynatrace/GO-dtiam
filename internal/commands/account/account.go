@@ -42,6 +42,7 @@ func init() {
 	Cmd.AddCommand(checkCapacityCmd)
 	Cmd.AddCommand(subscriptionsCmd)
 	Cmd.AddCommand(forecastCmd)
+	Cmd.AddCommand(capabilitiesCmd)
 }
 
 var limitsCmd = &cobra.Command{
@@ -196,6 +197,70 @@ UUID or name, displays full details for that subscription.`,
 		}
 
 		return printer.Print(subs, output.SubscriptionColumns())
+	},
+}
+
+var capabilitiesCmd = &cobra.Command{
+	Use:   "capabilities [SUBSCRIPTION]",
+	Short: "List account capabilities from subscriptions",
+	Long: `List capability flags from account subscriptions.
+
+When called without arguments, lists capabilities from all subscriptions.
+When given a subscription UUID or name, lists capabilities for that subscription only.`,
+	Example: `  # List all capabilities
+  dtiam account capabilities
+
+  # List capabilities for a specific subscription
+  dtiam account capabilities "Enterprise Plan"
+
+  # List capabilities by subscription UUID
+  dtiam account capabilities abc-123-def-456
+
+  # Output as JSON
+  dtiam account capabilities -o json
+
+  # Machine-friendly output
+  dtiam account capabilities --plain`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		c, err := common.CreateClient()
+		if err != nil {
+			return err
+		}
+		defer c.Close()
+
+		handler := resources.NewSubscriptionHandler(c)
+		printer := cli.GlobalState.NewPrinter()
+		ctx := context.Background()
+
+		var subID *string
+		if len(args) > 0 {
+			// Try UUID first, then name
+			sub, err := handler.Get(ctx, args[0])
+			if err != nil {
+				sub, err = handler.GetByName(ctx, args[0])
+				if err != nil {
+					return fmt.Errorf("subscription %q not found", args[0])
+				}
+			}
+			if sub == nil {
+				return fmt.Errorf("subscription %q not found", args[0])
+			}
+			uuid, _ := sub["uuid"].(string)
+			subID = &uuid
+		}
+
+		capabilities, err := handler.GetCapabilities(ctx, subID)
+		if err != nil {
+			return err
+		}
+
+		if len(capabilities) == 0 {
+			printer.PrintWarning("No capabilities found")
+			return nil
+		}
+
+		return printer.Print(capabilities, output.CapabilityColumns())
 	},
 }
 

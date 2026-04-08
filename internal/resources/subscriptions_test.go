@@ -251,6 +251,96 @@ func TestSubscriptionHandler_GetForecast_Success(t *testing.T) {
 	}
 }
 
+func TestSubscriptionHandler_GetCapabilities_All(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/subscriptions", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{
+			"items": []any{
+				map[string]any{
+					"uuid": "sub1",
+					"name": "Enterprise",
+					"capabilities": []any{
+						map[string]any{"key": "APM", "enabled": true},
+						map[string]any{"key": "RUM", "enabled": false},
+					},
+				},
+				map[string]any{
+					"uuid": "sub2",
+					"name": "Trial",
+					"capabilities": []any{
+						map[string]any{"key": "LogAnalytics", "enabled": true},
+					},
+				},
+			},
+		})
+	})
+
+	h := newTestSubscriptionHandler(t, mux)
+	caps, err := h.GetCapabilities(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("GetCapabilities() error: %v", err)
+	}
+	if len(caps) != 3 {
+		t.Fatalf("GetCapabilities() returned %d capabilities, want 3", len(caps))
+	}
+	// Verify subscription name is attached
+	if caps[0]["subscription"] != "Enterprise" {
+		t.Errorf("GetCapabilities()[0] subscription = %v, want Enterprise", caps[0]["subscription"])
+	}
+	if caps[2]["subscription"] != "Trial" {
+		t.Errorf("GetCapabilities()[2] subscription = %v, want Trial", caps[2]["subscription"])
+	}
+}
+
+func TestSubscriptionHandler_GetCapabilities_SingleSubscription(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/subscriptions/sub1", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{
+			"uuid": "sub1",
+			"name": "Enterprise",
+			"capabilities": []any{
+				map[string]any{"key": "APM", "enabled": true},
+			},
+		})
+	})
+
+	h := newTestSubscriptionHandler(t, mux)
+	uuid := "sub1"
+	caps, err := h.GetCapabilities(context.Background(), &uuid)
+	if err != nil {
+		t.Fatalf("GetCapabilities() error: %v", err)
+	}
+	if len(caps) != 1 {
+		t.Fatalf("GetCapabilities() returned %d capabilities, want 1", len(caps))
+	}
+	if caps[0]["key"] != "APM" {
+		t.Errorf("GetCapabilities()[0] key = %v, want APM", caps[0]["key"])
+	}
+}
+
+func TestSubscriptionHandler_GetCapabilities_NoCapabilities(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/subscriptions", func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(map[string]any{
+			"items": []any{
+				map[string]any{
+					"uuid": "sub1",
+					"name": "Basic",
+				},
+			},
+		})
+	})
+
+	h := newTestSubscriptionHandler(t, mux)
+	caps, err := h.GetCapabilities(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("GetCapabilities() error: %v", err)
+	}
+	if len(caps) != 0 {
+		t.Errorf("GetCapabilities() returned %d capabilities, want 0", len(caps))
+	}
+}
+
 func TestSubscriptionHandler_GetForecast_WithUUID(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/subscriptions/sub1/forecast", func(w http.ResponseWriter, r *http.Request) {

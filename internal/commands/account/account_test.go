@@ -7,7 +7,7 @@ import (
 )
 
 func TestAccountCmd_HasSubcommands(t *testing.T) {
-	expected := []string{"limits", "check-capacity", "subscriptions", "forecast"}
+	expected := []string{"limits", "check-capacity", "subscriptions", "forecast", "capabilities"}
 
 	subcmds := Cmd.Commands()
 	names := make(map[string]bool)
@@ -86,6 +86,18 @@ func TestForecastCmd_AcceptsOptionalArg(t *testing.T) {
 	// forecast uses MaximumNArgs(1) — should accept 0 or 1 args
 	if forecastCmd.Args == nil {
 		t.Error("forecast command should have args validation")
+	}
+}
+
+func TestCapabilitiesCmd_AcceptsOptionalArg(t *testing.T) {
+	if capabilitiesCmd.Args == nil {
+		t.Error("capabilities command should have args validation")
+	}
+}
+
+func TestCapabilitiesCmd_HasExample(t *testing.T) {
+	if capabilitiesCmd.Example == "" {
+		t.Error("capabilities command should have example text")
 	}
 }
 
