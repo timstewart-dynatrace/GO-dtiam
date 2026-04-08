@@ -10,7 +10,7 @@ This document consolidates all implementation phases for bringing dtiam to full 
 |-------|------|--------|-------------|
 | 1 | Foundation | **Done** | Safe type assertions, URL constants, client consolidation |
 | 1.5 | Command Standards | **Done** | Centralized prompts, --plain JSON override, Example help text |
-| 2 | Architecture Alignment | Pending | Resty client, Viper config, Logrus logging, struct-tag output |
+| 2 | Architecture Alignment | **Done** | Resty client, Viper config, Logrus logging, struct-tag output |
 | 3 | New Resource Types | Pending | Platform tokens, apps, schemas, zones, account capabilities |
 | 4 | Advanced Operations | Pending | Group clone/setup, parameterized policies, app/schema boundaries |
 | 5 | Templates & Apply | Pending | Template engine, declarative apply, bulk create-groups-with-policies |
