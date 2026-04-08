@@ -146,4 +146,4 @@ All core CRUD, user/group/service-user management, bulk ops, export, analyze, ac
 **Remaining (~8%)**:
 Templates, zones, group clone/setup, parameterized policies, app/schema boundaries, caching, permission gaps/diff, user info/bulk-groups, per-resource exports, account capabilities.
 
-All gaps are tracked in `.claude/phases/PHASE-03 through PHASE-08`.
+Remaining gaps are tracked in `.claude/phases/PHASE-03` (3.4-3.5) and `PHASE-04 through PHASE-07`.

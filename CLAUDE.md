@@ -763,8 +763,6 @@ Level types: `account`, `environment`, `global`
 | Feature | Description | Priority |
 |---------|-------------|----------|
 | `template` commands | Template-based resource creation | Medium |
-| `get apps` | App Engine Registry integration | Low |
-| `get schemas` | Settings schema listing | Low |
 | Caching | In-memory caching with TTL | Low |
 
 ## Configuration
@@ -876,7 +874,7 @@ OAuth2 client needs appropriate scopes:
 
 ### Build Errors
 
-Ensure Go 1.22+ is installed:
+Ensure Go 1.23+ is installed:
 ```bash
 go version
 go mod tidy
