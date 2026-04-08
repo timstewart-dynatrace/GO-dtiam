@@ -86,6 +86,31 @@ type Subscription struct {
 	EndTime   string `json:"endTime" table:"END,wide"`
 }
 
+// PlatformToken represents a Dynatrace platform token.
+type PlatformToken struct {
+	ID        string `json:"id" table:"ID"`
+	Name      string `json:"name" table:"NAME"`
+	Scopes    string `json:"scopes" table:"SCOPES,wide"`
+	ExpiresIn string `json:"expiresIn" table:"EXPIRES"`
+	CreatedAt string `json:"createdAt" table:"CREATED,wide"`
+	Token     string `json:"token" table:"-"` // Only returned on create
+}
+
+// App represents a Dynatrace App Engine app.
+type App struct {
+	ID          string `json:"id" table:"ID"`
+	Name        string `json:"name" table:"NAME"`
+	Version     string `json:"version" table:"VERSION"`
+	Description string `json:"description" table:"DESCRIPTION,wide"`
+}
+
+// Schema represents a Dynatrace Settings 2.0 schema.
+type Schema struct {
+	SchemaID    string `json:"schemaId" table:"SCHEMA ID"`
+	DisplayName string `json:"displayName" table:"DISPLAY NAME"`
+	LatestVersion string `json:"latestSchemaVersion" table:"VERSION,wide"`
+}
+
 // MapToGroup converts a map[string]any to a Group.
 func MapToGroup(m map[string]any) Group {
 	return Group{
