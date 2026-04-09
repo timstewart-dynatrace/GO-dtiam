@@ -10,6 +10,7 @@ func TestBulkCmd_HasSubcommands(t *testing.T) {
 	expected := []string{
 		"add-users-to-group", "remove-users-from-group",
 		"create-groups", "create-bindings", "export-group-members",
+		"create-groups-with-policies",
 	}
 
 	subcmds := Cmd.Commands()

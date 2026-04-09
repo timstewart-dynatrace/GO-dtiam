@@ -558,13 +558,12 @@ With --as-template, exports in template format with variable placeholders.`,
 		var exportData map[string]any
 
 		if asTemplate {
-			// Export as template
+			// Export as Go text/template format compatible with dtiam template apply
 			exportData = map[string]any{
-				"description": fmt.Sprintf("Template from policy: %s", policyName),
-				"kind":        "Policy",
-				"template": map[string]any{
-					"name":           "{{ policy_name }}",
-					"description":    "{{ description | default('') }}",
+				"kind": "Policy",
+				"spec": map[string]any{
+					"name":           "{{.name}}",
+					"description":    fmt.Sprintf("{{.description | default \"%s\"}}", policyName),
 					"statementQuery": policy["statementQuery"],
 				},
 			}

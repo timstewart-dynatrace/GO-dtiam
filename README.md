@@ -78,6 +78,15 @@ Multi-context configuration and scope requirements are covered in the **[Quick S
 | Apps | get (requires --environment) |
 | Schemas | get, search (requires --environment) |
 
+### Templates & Declarative Apply
+
+| Command | Description |
+|---------|-------------|
+| `template list` | List built-in and custom templates |
+| `template render NAME --set key=value` | Render a template with variables |
+| `template apply NAME --set key=value` | Create a resource from a template |
+| `apply -f resource.yaml` | Declarative resource creation from YAML/JSON |
+
 ### Bulk & Analysis
 
 | Command | Description |
@@ -85,6 +94,7 @@ Multi-context configuration and scope requirements are covered in the **[Quick S
 | `bulk add-users-to-group` | Add users from CSV/YAML/JSON file |
 | `bulk create-groups` | Create multiple groups from file |
 | `bulk create-bindings` | Create bindings from file |
+| `bulk create-groups-with-policies` | Create groups + bind policies in one step |
 | `export all` | Export all IAM resources for backup |
 | `analyze user-permissions` | Calculate effective user permissions |
 | `analyze permissions-matrix` | Generate permissions matrix |

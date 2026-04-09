@@ -1,0 +1,4 @@
+kind: Binding
+spec:
+  group: "{{.group}}"
+  policy: "{{.policy}}"

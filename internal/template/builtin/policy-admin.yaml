@@ -1,0 +1,8 @@
+kind: Policy
+spec:
+  name: "{{.name}}"
+  description: "{{.description | default "Administrative access policy"}}"
+  statementQuery: |
+    ALLOW settings:objects:read, settings:objects:write,
+          settings:schemas:read,
+          environment:roles:viewer, environment:roles:editor;
