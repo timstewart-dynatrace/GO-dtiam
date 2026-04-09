@@ -1,0 +1,4 @@
+kind: Group
+spec:
+  name: "{{.name}}"
+  description: "{{.description | default "Team group"}}"

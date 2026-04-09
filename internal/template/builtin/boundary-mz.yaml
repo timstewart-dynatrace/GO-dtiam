@@ -1,0 +1,6 @@
+kind: Boundary
+spec:
+  name: "{{.name}}"
+  description: "{{.description | default "Management zone boundary"}}"
+  zones:
+    - "{{.zone}}"

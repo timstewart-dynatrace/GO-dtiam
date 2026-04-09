@@ -1244,6 +1244,29 @@ dtiam bulk export-group-members --group "DevOps Team" --output members.csv
 dtiam bulk export-group-members -g DevOps -o members.json -F json
 ```
 
+### bulk create-groups-with-policies
+
+Create groups and bind policies from a CSV, JSON, or YAML file.
+
+```bash
+dtiam bulk create-groups-with-policies --file FILE [OPTIONS]
+```
+
+| Option               | Short | Description                          |
+| -------------------- | ----- | ------------------------------------ |
+| `--file`             | `-f`  | Input file (required)                |
+| `--continue-on-error`|       | Continue processing on errors        |
+
+CSV columns: `group_name`, `description`, `policy_name`, `boundary_name`
+
+**Examples:**
+
+```bash
+dtiam bulk create-groups-with-policies --file groups-policies.csv
+dtiam bulk create-groups-with-policies --file groups-policies.yaml --continue-on-error
+dtiam bulk create-groups-with-policies --file groups-policies.csv --dry-run
+```
+
 ---
 
 ## export
@@ -1372,6 +1395,107 @@ Export all service users to a file.
 ```bash
 dtiam export service-users [OPTIONS]
 dtiam export service-users -f yaml -o ./backup
+```
+
+---
+
+## template
+
+Manage and use resource templates.
+
+### template list
+
+List all available templates (built-in and custom).
+
+```bash
+dtiam template list
+```
+
+### template show
+
+Display a template's content and required variables.
+
+```bash
+dtiam template show NAME
+```
+
+### template render
+
+Render a template with variable substitution to stdout.
+
+```bash
+dtiam template render NAME --set key=value [--set key2=value2]
+```
+
+**Examples:**
+
+```bash
+dtiam template render policy-readonly --set name=MyPolicy
+dtiam template render group-team --set name=DevOps --set description="DevOps Team"
+```
+
+### template apply
+
+Render a template and create the resulting resource.
+
+```bash
+dtiam template apply NAME --set key=value [--dry-run]
+```
+
+**Examples:**
+
+```bash
+dtiam template apply policy-readonly --set name=MyPolicy
+dtiam template apply group-team --set name=DevOps --dry-run
+```
+
+### template save
+
+Save a custom template from a file.
+
+```bash
+dtiam template save NAME --file TEMPLATE_FILE
+```
+
+### template delete
+
+Delete a custom template.
+
+```bash
+dtiam template delete NAME [--force]
+```
+
+### template path
+
+Show the filesystem path where custom templates are stored.
+
+```bash
+dtiam template path
+```
+
+---
+
+## apply
+
+Create resources declaratively from YAML/JSON files.
+
+```bash
+dtiam apply -f FILE [--set key=value] [--dry-run]
+```
+
+| Option   | Short | Description                                |
+| -------- | ----- | ------------------------------------------ |
+| `--file` | `-f`  | Resource definition file (required)        |
+| `--set`  |       | Template variable as key=value (repeatable)|
+
+Supports `kind: Group|Policy|Boundary|Binding` with a `spec` section. Multiple documents supported via YAML `---` separators.
+
+**Examples:**
+
+```bash
+dtiam apply -f group.yaml
+dtiam apply -f policy-template.yaml --set name=MyPolicy
+dtiam apply -f all-resources.yaml --dry-run
 ```
 
 ---

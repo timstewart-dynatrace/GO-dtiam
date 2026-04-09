@@ -5,6 +5,7 @@ import (
 	"github.com/jtimothystewart/dtiam/internal/cli"
 	"github.com/jtimothystewart/dtiam/internal/commands/account"
 	"github.com/jtimothystewart/dtiam/internal/commands/analyze"
+	applycmd "github.com/jtimothystewart/dtiam/internal/commands/apply"
 	"github.com/jtimothystewart/dtiam/internal/commands/boundary"
 	"github.com/jtimothystewart/dtiam/internal/commands/bulk"
 	"github.com/jtimothystewart/dtiam/internal/commands/cache"
@@ -16,6 +17,7 @@ import (
 	"github.com/jtimothystewart/dtiam/internal/commands/get"
 	"github.com/jtimothystewart/dtiam/internal/commands/group"
 	"github.com/jtimothystewart/dtiam/internal/commands/serviceuser"
+	templatecmd "github.com/jtimothystewart/dtiam/internal/commands/template"
 	"github.com/jtimothystewart/dtiam/internal/commands/user"
 )
 
@@ -35,6 +37,8 @@ func main() {
 	cli.AddCommand(bulk.Cmd)
 	cli.AddCommand(export.Cmd)
 	cli.AddCommand(analyze.Cmd)
+	cli.AddCommand(templatecmd.Cmd)
+	cli.AddCommand(applycmd.Cmd)
 
 	// Execute
 	cli.Execute()

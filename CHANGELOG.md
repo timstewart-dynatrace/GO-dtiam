@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-04-08
+
+### Added
+
+- **Template engine** — `internal/template/` package with Go `text/template` renderer, XDG-based template store, and 5 built-in templates (group-team, policy-readonly, policy-admin, binding-simple, boundary-mz)
+- **Template commands** — `template list/show/render/apply/save/delete/path` for managing and using resource templates
+- **Apply command** — `dtiam apply -f resource.yaml` declarative resource creation with auto-detect kind, `--set` template variables, `--dry-run`, and multi-document YAML support
+- **Bulk groups+policies** — `bulk create-groups-with-policies --file FILE` creates groups and binds policies from CSV/YAML/JSON in one step
+- **Export template enhancement** — `export policy --as-template` now uses Go template syntax (`{{.name}}`) compatible with `dtiam template apply`
+
 ## [1.5.0] - 2026-04-08
 
 ### Added

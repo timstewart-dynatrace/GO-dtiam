@@ -219,9 +219,28 @@ Level types: `account`, `environment`, `global`
 | `boundary create-app-boundary NAME` | Create boundary scoped to app IDs (`shared:app-id IN/NOT IN`) |
 | `boundary create-schema-boundary NAME` | Create boundary scoped to schema IDs (`settings:schemaId IN/NOT IN`) |
 
-### Not Yet Implemented
+### Template Operations
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| `template` commands | Template-based resource creation | Medium |
-| Caching | In-memory caching with TTL | Low |
+| Command | Description |
+|---------|-------------|
+| `template list` | List built-in and custom templates |
+| `template show NAME` | Display template content and variables |
+| `template render NAME` | Render template with `--set` variables |
+| `template apply NAME` | Render and create resource |
+| `template save NAME` | Save custom template from file |
+| `template delete NAME` | Delete custom template |
+| `template path` | Show templates directory |
+
+### Apply Command
+
+| Command | Description |
+|---------|-------------|
+| `apply -f FILE` | Create resources from YAML/JSON with auto-detect kind, `--set` variables, multi-document support |
+
+### Deferred (Not Planned)
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| Caching | In-memory caching with TTL | Deferred — not needed for parity |
+| Zones | Management zone listing via entities API | Deferred — legacy feature |
+| Permission diff/gaps | Advanced analysis enhancements | Deferred — nice-to-have |
