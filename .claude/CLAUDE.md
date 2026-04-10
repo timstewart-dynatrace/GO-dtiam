@@ -39,6 +39,9 @@ Before starting work, check `.claude/phases/` for the active phase.
 @.claude/rules/go.md
 @.claude/rules/development.md
 @.claude/rules/testing.md
+@.claude/rules/deployment.md
+@.claude/rules/existing-code.md
+@.claude/rules/settings.md
 
 ### Debugging & Troubleshooting
 @.claude/rules/debugging.md
