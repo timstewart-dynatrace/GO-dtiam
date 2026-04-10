@@ -1,27 +1,24 @@
-# Developer Porting Reference
+# dtiam Porting Reference for dtctl
 
-This directory contains documentation for porting dtiam's IAM functionality into [dtctl](https://github.com/dynatrace-oss/dtctl). These documents capture design patterns, algorithms, and empirical API knowledge that would otherwise require reverse-engineering from dtiam's source code.
+Two design proposals — [IAM Integration](https://github.com/dynatrace-oss/dtctl/blob/docs/iam-integration-design/docs/dev/IAM_INTEGRATION_DESIGN.md) and [Account Namespace](https://github.com/dynatrace-oss/dtctl/blob/docs/account-namespace-design/docs/dev/ACCOUNT_NAMESPACE_DESIGN.md) — describe integrating dtiam's IAM functionality into dtctl as `dtctl iam` and `dtctl account` subcommand namespaces. Both designs draw from dtiam as the prototype, porting logic and design patterns rather than forking the codebase.
 
-**This branch is a reference branch and should not be merged to main.**
+This directory captures what the design docs don't: the algorithms behind dtiam's analysis commands, the undocumented API behaviors discovered through 737 tests and production usage, and the internal data formats that define compatibility. These are things that would otherwise require reading dtiam's source to learn.
+
+**This is a reference branch. It should not be merged to main.**
 
 ---
 
 ## Documents
 
-| Document | Purpose |
-|----------|---------|
-| [DTCTL_INTEGRATION_EVALUATION.md](DTCTL_INTEGRATION_EVALUATION.md) | Gap analysis of dtctl's IAM and Account namespace design documents against dtiam's feature set. Identifies what maps cleanly, what's missing, and recommendations. |
-| [ANALYSIS_ALGORITHMS.md](ANALYSIS_ALGORITHMS.md) | Permission analysis algorithms used by the 7 `analyze` subcommands. Describes inputs, API call sequences, deduplication logic, and matrix construction. Primary porting target for `dtctl iam analyze`. |
-| [API_QUIRKS.md](API_QUIRKS.md) | Empirically discovered Dynatrace Account Management API behaviors: response format inconsistencies, null vs absent fields, pagination patterns, error shapes, OAuth token semantics, and retry behavior. |
-| [EXPORT_SCHEMA.md](EXPORT_SCHEMA.md) | Structure of YAML/JSON produced by dtiam's `export` commands. Defines field names, enrichment behavior, and CSV flattening rules. Compatibility target if `dtctl iam export` is implemented. |
-| [BOUNDARY_QUERIES.md](BOUNDARY_QUERIES.md) | Boundary query string format and construction rules for app-id and schema-id boundaries. Includes the `buildBoundaryQuery()` function logic and validation workflow. |
-| [GROUP_CLONE_ALGORITHM.md](GROUP_CLONE_ALGORITHM.md) | Compound operation sequence for `group clone`: create group, copy members, copy bindings. Documents error handling (best-effort, no rollback) and API call counts. |
+| Document | What it covers |
+|----------|---------------|
+| [DESIGN_REVIEW.md](DESIGN_REVIEW.md) | Evaluation of both design proposals from dtiam's perspective. Maps dtiam features to proposed dtctl equivalents, identifies gaps (missing export system, group clone, 4 analyze subcommands, 2 bulk operations), and flags the shared PKCE scope blocker. |
+| [ANALYZE_ALGORITHMS.md](ANALYZE_ALGORITHMS.md) | The 7 permission analysis algorithms: statement parsing, user/group effective permissions, policy and group matrices, least-privilege heuristics, and the Resolution API integration. Includes API call sequences and deduplication logic. |
+| [API_BEHAVIORS.md](API_BEHAVIORS.md) | Empirically discovered API behaviors not in official docs: response format inconsistencies across endpoints, null vs absent vs empty handling, pagination patterns (three different styles), error shapes, OAuth resource URN requirement, and rate limiting behavior. |
+| [EXPORT_FORMAT.md](EXPORT_FORMAT.md) | YAML/JSON structure produced by each `export` subcommand. Field names, enrichment options, CSV flattening rules, and the `writeData()` format contract. Compatibility target if `dtctl iam export` is implemented. |
+| [BOUNDARY_QUERY_FORMAT.md](BOUNDARY_QUERY_FORMAT.md) | How boundary query strings are constructed for app-id and schema-id boundaries. Covers the `buildBoundaryQuery()` function, quoting rules, validation against environment APIs, and the three-line management zone pattern. |
+| [GROUP_CLONE.md](GROUP_CLONE.md) | The compound `group clone` operation: create group, copy members, copy bindings. Documents the best-effort/no-rollback error strategy, API call counts, and the related `group setup` command for declarative provisioning. |
 
-## How to Use
+## Context
 
-These documents are intended for developers implementing `dtctl iam` and `dtctl account`. They complement the design proposals:
-
-- [IAM_INTEGRATION_DESIGN.md](https://github.com/dynatrace-oss/dtctl/blob/docs/iam-integration-design/docs/dev/IAM_INTEGRATION_DESIGN.md) — command structure, config, auth, handlers
-- [ACCOUNT_NAMESPACE_DESIGN.md](https://github.com/dynatrace-oss/dtctl/blob/docs/account-namespace-design/docs/dev/ACCOUNT_NAMESPACE_DESIGN.md) — subscriptions, cost, audit, notifications
-
-The design docs describe *what* to build. These docs describe *how dtiam built it* and *what the API actually does* (vs what the docs say).
+The design docs describe *what* to build. These docs describe *how dtiam built it* and *what the API actually does*.

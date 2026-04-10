@@ -1,18 +1,8 @@
-# dtctl Integration Design Evaluation
+# Design Review
 
-**Date:** 2026-04-10
-**Evaluator:** dtiam maintainer
-**Documents Reviewed:**
-- [IAM_INTEGRATION_DESIGN.md](https://github.com/dynatrace-oss/dtctl/blob/docs/iam-integration-design/docs/dev/IAM_INTEGRATION_DESIGN.md)
-- [ACCOUNT_NAMESPACE_DESIGN.md](https://github.com/dynatrace-oss/dtctl/blob/docs/account-namespace-design/docs/dev/ACCOUNT_NAMESPACE_DESIGN.md)
+Review of the [IAM Integration](https://github.com/dynatrace-oss/dtctl/blob/docs/iam-integration-design/docs/dev/IAM_INTEGRATION_DESIGN.md) and [Account Namespace](https://github.com/dynatrace-oss/dtctl/blob/docs/account-namespace-design/docs/dev/ACCOUNT_NAMESPACE_DESIGN.md) design proposals, assessed from the dtiam codebase (v2.0.0, 737 tests, 80+ subcommands).
 
----
-
-## Executive Summary
-
-These two design documents propose integrating dtiam's IAM functionality — and new account-level FinOps/audit capabilities — into dtctl as `dtctl iam` and `dtctl account` subcommand namespaces. The designs are thorough, well-reasoned, and explicitly credit dtiam as the prototype. This evaluation assesses both documents from the perspective of the dtiam codebase, identifying what maps cleanly, what diverges, and what requires attention.
-
-**Overall assessment:** Both designs are strong. The IAM integration captures dtiam's feature set faithfully and adapts it well to dtctl's architecture. The account namespace extends into territory dtiam partially covers (subscriptions, environments) and adds valuable new surfaces (cost, audit, notifications). The designs are complementary and share infrastructure correctly.
+Both designs are strong. The IAM integration captures dtiam's feature set faithfully. The account namespace adds valuable new surfaces (cost, audit, notifications) that dtiam never addressed. The key gaps are documented below.
 
 ---
 
