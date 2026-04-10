@@ -251,13 +251,13 @@ The IAM design lists 3 analyze operations. dtiam has 7, but most are **not recom
 
 - `analyze user-permissions` (listed) — client-side approximation, niche use
 - `analyze group-permissions` (missing) — client-side approximation, niche use
-- `analyze permissions-matrix` (listed) — interesting for audits but complex to maintain
+- `analyze permissions-matrix` (listed) — ported from the Python predecessor where it generated Excel audit reports; useful for compliance but complex to maintain in a CLI context
 - `analyze policy` (missing) — niche
 - `analyze least-privilege` (listed) — heuristic, not authoritative
 - `analyze effective-user` (missing) — **worth considering** — uses Resolution API, shows authoritative platform results
 - `analyze effective-group` (missing) — **worth considering** — same, for groups
 
-The client-side permission analysis algorithms (`user-permissions`, `group-permissions`, `permissions-matrix`, `policy`, `least-privilege`) are complex to implement, make many API calls (O(groups * bindings)), and produce approximations that can diverge from what Dynatrace actually computes. They filled a niche in dtiam but saw limited real-world use.
+The client-side permission analysis algorithms (`user-permissions`, `group-permissions`, `permissions-matrix`, `policy`, `least-privilege`) are complex to implement, make many API calls (O(groups * bindings)), and produce approximations that can diverge from what Dynatrace actually computes. The permissions matrix was ported from the Python predecessor (dtiam-py) where it was used to generate Excel-based audit reports for compliance reviews — it had a clear purpose in that context. In a CLI tool like dtctl, the same data is better served by exporting to CSV/JSON and letting users build reports in their own tooling.
 
 **Recommendation:** Skip the client-side analysis commands. If analyze functionality is desired, implement only `effective-user` and `effective-group` — these call the Dynatrace Resolution API and return authoritative results with minimal client-side logic.
 
